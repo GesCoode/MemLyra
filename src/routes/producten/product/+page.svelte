@@ -1,5 +1,6 @@
 <script lang="ts">
   import background from "$lib/assets/background.png";
+  import Breadcrumb from "$lib/components/Breadcrumb.svelte";
   import Button from "$lib/components/FieldBuilder/Button.svelte";
   import { slide } from "svelte/transition";
 
@@ -95,7 +96,7 @@
 
 <div
   id="wrapper"
-  class="flex flex-col gap-6 lg:flex-row px-4 md:px-8 lg:px-16 pb-15 pt-15"
+  class="flex flex-col gap-6 lg:flex-row px-4 md:px-8 lg:px-16 pb-15"
 >
   <img
     src={image}
