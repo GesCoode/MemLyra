@@ -10,7 +10,7 @@
   import CustomButton from "$lib/components/form/CustomButton.svelte";
 </script>
 
-<div id="wrapper" class="w-full flex flex-col gap-16 py-8">
+<div id="wrapper" class="w-full flex flex-col gap-16 pb-8">
 
   <!-- Banner -->
   <div
