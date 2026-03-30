@@ -114,7 +114,7 @@
           <p class="text-accent font-sans text-3xl">
             {toFormattedPrice(price)}
           </p>
-          <p class="text-[#626669] font-light text-base leading-4">
+          <p class="text-[#626669] font-light text-base leading-4 line-through">
             {toFormattedPrice(discounted_price)}
           </p>
         </div>
@@ -148,21 +148,28 @@
       {#each extraInfo as info}
         <div class="flex flex-col gap-2 mb-2">
           <hr class="border-[#ABAEB1] h-px" />
-          <div class="flex flex-row justify-between mx-3">
+          <div class="flex flex-row justify-between mx-3 cursor-pointer"
+            onclick={() => {
+              const isOpen = info.visible;
+
+              extraInfo.forEach((i) => (i.visible = false));
+
+              if (!isOpen) {
+                info.visible = true;
+              }
+
+              extraInfo = extraInfo;
+            }}
+          >
             <p class="font-bold text-heading">{info.title}</p>
-            <button
-              onclick={() => {
-                extraInfo.map((i) => (i.visible = false));
-                info.visible = !info.visible;
-              }}
-              class="font-extralight text-4xl leading-0 text-heading"
-            >
+
+            <span class="font-extralight text-4xl leading-0 text-heading py-3">
               {#if info.visible}
                 -
               {:else}
                 +
               {/if}
-            </button>
+            </span>
           </div>
 
           {#if info.visible}

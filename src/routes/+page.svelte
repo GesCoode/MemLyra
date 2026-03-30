@@ -21,7 +21,7 @@
 
     <!-- LEFT: TEXT -->
     <div class="flex-1 flex flex-col gap-9">
-      <h1 class="text-primary text-6xl font-medium font-sans max-w-xl">
+      <h1 class="text-primary text-6xl font-medium font-sans max-w-xl leading-16">
         Veiligheid binnen handbereik met SOS tag
       </h1>
 
@@ -143,7 +143,7 @@
     </div>
     </div>
       <div class="px-4 w-full hidden lg:flex justify-center">
-        <div class="w-[480px] h-[560px] relative overflow-hidden">
+        <div class="w-[480px] h-[480px] relative overflow-hidden">
           <Slideshow />
         </div>
       </div>

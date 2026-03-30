@@ -1,4 +1,7 @@
 <script lang="ts">
+  import CustomButton from "./form/CustomButton.svelte";
+  
+
   type Props = {
     title: string;
     price: number; // cents
@@ -55,12 +58,17 @@
         <p class="font-sans text-heading text-2xl">{toFormattedPrice(price)}</p>
       </div>
 
-      <button
-        class="bg-accent w-fit h-8 text-white rounded px-3"
-        onclick={addToCart}
-      >
-        ADD
-      </button>
+      <div class="flex items-center gap-[9px] rounded-sm bg-[var(--accent,#0C3966)]">
+        <CustomButton
+          text="Bekijk product"
+          rounded={true}
+          bgColor="rgba(255, 255, 255, 0.1)"
+          textColor="#FFF"
+          outlineColor="#0C3966"
+          outlineWidth={1}
+          class=""
+          on:click={addToCart}/>
+      </div>
     </div>
   </div>
 </div>

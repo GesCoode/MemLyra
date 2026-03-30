@@ -1,7 +1,7 @@
 <script lang="ts">
   import background from "$lib/assets/background.png";
   import FieldBuilder from "$lib/components/FieldBuilder/FieldBuilder.svelte";
-  import Button from "$lib/components/FieldBuilder/Button.svelte";
+  import CustomButton from "$lib/components/form/CustomButton.svelte";
   import InputField from "$lib/components/FieldBuilder/InputField.svelte";
 
   let code = "";
@@ -17,7 +17,7 @@
 
 <div
   id="wrapper"
-  class="flex justify-center items-center h-dvh px-4 md:px-8 xl:px-16"
+  class="flex justify-center items-center h-[648px] px-4 md:px-8 xl:px-16"
 >
   <img
     src={background}
@@ -29,14 +29,31 @@
   <div id="fieldWrapper" class="w-88">
     <FieldBuilder title="Twee factor authenticatie">
       <InputField
-        label="Voer uw eenmalige wachtwoord in:"
+        label="Voer uw eenmalige wachtwoord in"
         bind:value={code}
         placeholder="Eenmalig wachtwoord"
       ></InputField>
 
       <div class="flex flex-col gap-4">
-        <Button content="Volgende" onClick={handle2fa}></Button>
-        <Button content="Cancel" primary={false} onClick={cancel}></Button>
+        <CustomButton
+          text="Volgende"
+          rounded={true}
+          bgColor="#0C3966"
+          textColor="#FFF"
+          outlineColor="#0C3966"
+          outlineWidth={0}
+          on:click={handle2fa}
+        />
+
+        <CustomButton
+          text="Annuleer"
+          rounded={true}
+          bgColor="#FFF"
+          textColor="#0C3966"
+          outlineColor="#0C3966"
+          outlineWidth={1}
+          on:click={cancel}
+        />
       </div>
     </FieldBuilder>
   </div>

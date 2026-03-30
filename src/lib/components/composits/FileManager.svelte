@@ -30,7 +30,7 @@
     }
 </script>
 
-<div class="flex flex-col w-full bg-[#0C3966] rounded p-2">
+<div class="flex flex-col w-full bg-[#0C3966] rounded">
     <div class="flex justify-end mb-1">
         {#if file}
             <button

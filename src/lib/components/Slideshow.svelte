@@ -101,8 +101,8 @@
 
 <!-- Slideshow container -->
 <div
-  class="relative w-[420px] h-[500px] mx-auto overflow-visible"
-  style="perspective: 1600px;"
+  class="relative w-[420px] h-[400px] mx-auto overflow-visible"
+  style="perspective: 1200px;"
   on:mouseenter={() => { paused = true; showText = true; }}
   on:mouseleave={() => { paused = false; showText = false; }}
 >
