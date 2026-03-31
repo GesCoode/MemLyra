@@ -12,80 +12,57 @@
 </script>
 
 <div class="flex h-full flex-1 justify-center items-center bg-[#0C3966]">
-    <div class="flex flex-col items-center gap-6 w-full">
+    <div class="flex flex-col items-center gap-12 w-full max-w-4xl px-12">
+        <!-- Header -->
         <div class="text-white font-spaceGrotesk text-[20px] font-bold">
             Mijn abonnement
         </div>
 
-        <!-- Abonnement informatie -->
-        <div
-            class="flex flex-col md:flex-row xl:flex-col 2xl:flex-row gap-4 px-4 w-full"
-        >
-            <!-- Block 1: Startdatum + Einddatum -->
-            <div class="flex flex-row flex-1 gap-4">
-                <!-- Startdatum -->
-                <div class="flex flex-1 flex-col items-center gap-4">
-                    <div
-                        class="text-white font-spaceGrotesk text-[14px] font-medium text-center"
-                    >
-                        Startdatum
-                    </div>
-                    <div
-                        class="text-white font-spaceGrotesk text-[16px] font-bold tracking"
-                    >
-                        01-01-2026
-                    </div>
+        <!-- Grid Abonnement informatie -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full text-center">
+            <!-- Startdatum -->
+            <div class="flex flex-col items-center gap-2">
+                <div class="text-white font-spaceGrotesk text-[14px] font-medium">
+                    Startdatum
                 </div>
-
-                <!-- Einddatum -->
-                <div class="flex flex-1 flex-col items-center gap-4">
-                    <div
-                        class="text-white font-spaceGrotesk text-[14px] font-medium text-center"
-                    >
-                        Einddatum
-                    </div>
-                    <div
-                        class="text-white font-spaceGrotesk text-[16px] font-bold tracking"
-                    >
-                        01-01-2027
-                    </div>
+                <div class="text-white font-spaceGrotesk text-[16px] font-bold tracking">
+                    01-01-2026
                 </div>
             </div>
 
-            <!-- Block 2: Dagen resterend + Soort abonnement -->
-            <div class="flex flex-row flex-1 gap-4">
-                <!-- Dagen resterend -->
-                <div class="flex flex-1 flex-col items-center gap-4">
-                    <div
-                        class="text-white font-spaceGrotesk text-[14px] font-medium text-center"
-                    >
-                        Dagen resterend
-                    </div>
-                    <div
-                        class="text-white font-spaceGrotesk text-[16px] font-bold tracking text-center"
-                    >
-                        362
-                    </div>
+            <!-- Einddatum -->
+            <div class="flex flex-col items-center gap-2">
+                <div class="text-white font-spaceGrotesk text-[14px] font-medium">
+                    Einddatum
                 </div>
-
-                <!-- Soort abonnement -->
-                <div class="flex flex-1 flex-col items-center gap-4">
-                    <div
-                        class="text-white font-spaceGrotesk text-[14px] font-medium text-center"
-                    >
-                        Soort abonnement
-                    </div>
-                    <div
-                        class="text-white font-spaceGrotesk text-[16px] font-bold tracking"
-                    >
-                        1 Jaar
-                    </div>
+                <div class="text-white font-spaceGrotesk text-[16px] font-bold tracking">
+                    01-01-2027
                 </div>
             </div>
+
+            <!-- Dagen resterend -->
+            <div class="flex flex-col items-center gap-2">
+                <div class="text-white font-spaceGrotesk text-[14px] font-medium">
+                    Dagen resterend
+                </div>
+                <div class="text-white font-spaceGrotesk text-[16px] font-bold tracking">
+                    362
+                </div>
+            </div>
+
+            <!-- Soort abonnement -->
+            <!-- <div class="flex flex-col items-center gap-2">
+                <div class="text-white font-spaceGrotesk text-[14px] font-medium">
+                    Soort abonnement
+                </div>
+                <div class="text-white font-spaceGrotesk text-[16px] font-bold tracking">
+                    1 Jaar
+                </div>
+            </div> -->
         </div>
 
+        <!-- Verlengen -->
         <div class="flex flex-col gap-2 items-center">
-            <!-- Verlengen -->
             <div class="text-white font-spaceGrotesk text-[20px] font-bold">
                 Verlengen
             </div>
@@ -111,7 +88,5 @@
                 onClick={handleVerlengen}
             />
         </div>
-
-        <div class="flex flex-col items-start"></div>
     </div>
 </div>

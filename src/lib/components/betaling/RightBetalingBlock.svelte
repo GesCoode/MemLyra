@@ -99,7 +99,7 @@
     ];
 </script>
 
-<div class="flex flex-col h-full bg-[#FFF] p-4 rounded gap-4">
+<div class="flex flex-col h-full bg-[#FFF] pl-2 sm:px-4 py-4 rounded gap-4">
     <!-- Header -->
     <div class="text-black font-spaceGrotesk text-[20px] font-bold">
         Betalingsoverzicht
@@ -113,7 +113,7 @@
         >
             <div class="text-black font-bold w-1/5">Datum</div>
             <div class="text-black font-bold w-1/5">Bedrag</div>
-            <div class="text-black font-bold w-1/5">Methode</div>
+            <div class="text-black font-bold w-1/5 hidden sm:block">Methode</div>
             <div class="text-black font-bold w-1/5">Status</div>
             <div class="text-black font-bold w-1/5 text-center">PDF</div>
         </div>
@@ -125,7 +125,7 @@
             >
                 <div class="text-black font-light w-1/5">{payment.datum}</div>
                 <div class="text-black font-light w-1/5">{payment.bedrag}</div>
-                <div class="text-black font-light w-1/5">
+                <div class="text-black font-light w-1/5 hidden sm:block">
                     {payment.betaalmethode}
                 </div>
                 <div class="text-black font-light w-1/5">{payment.status}</div>

@@ -31,7 +31,7 @@
       </p>
 
       <div class="flex justify-center sm:justify-start gap-4">
-        <div class="flex w-auto items-start mt-2">
+        <div class="flex w-auto justify-center items-center mt-2">
           <CustomButton
               text="Ontdek"
               rounded={true}

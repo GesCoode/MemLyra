@@ -14,10 +14,6 @@
   function closeMenu() {
     menuOpen = false;
   }
-
-  function signIn() {
-    console.log("Navbar sign in button pressed");
-  }
 </script>
 
 <!-- NAVBAR -->
@@ -46,7 +42,7 @@
     <!-- DESKTOP LINKS -->
     <div id="left" class="hidden xl:flex">
       <a class="px-2" href="/">voorpagina</a>
-      <a class="px-2" href="/informatie">hoe-het-werkt</a>
+      <a class="px-2" href="/hoehetwerkt">hoe-het-werkt</a>
       <a class="px-2" href="/producten">producten</a>
       <a class="px-2" href="/contact">contact</a>
     </div>
@@ -75,13 +71,14 @@
         />
       </a>
     {:else}
-      <CustomButton
-        text="Inloggen"
-        rounded={true}
-        bgColor="#0C3966"
-        textColor="#FFFFFF"
-        on:click={signIn}
-      />
+      <a href="/login">
+        <CustomButton
+          text="Inloggen"
+          rounded={true}
+          bgColor="#0C3966"
+          textColor="#FFFFFF"
+        />
+      </a>
     {/if}
   </div>
 </div>
@@ -107,35 +104,38 @@
     <a href="/informatie" on:click={closeMenu}>informatie</a>
     <a href="/producten" on:click={closeMenu}>producten</a>
     <a href="/contact" on:click={closeMenu}>contact</a>
-<!-- Side Menu Links -->
-<a
-  href="/winkelwagen"
-  on:click={closeMenu}
-  class="flex justify-between items-center w-full text-base font-normal hover:text-green-700"
->
-  <span>winkelwagen</span>
-  <img src={cartIcon} alt="Winkelwagen" class="h-5 w-auto cursor-pointer" />
-</a>
+
+    <!-- Side Menu Links -->
+    <a
+      href="/winkelwagen"
+      on:click={closeMenu}
+      class="flex justify-between items-center w-full text-base font-normal hover:text-green-700"
+    >
+      <span>winkelwagen</span>
+      <img src={cartIcon} alt="Winkelwagen" class="h-5 w-auto cursor-pointer" />
+    </a>
+
     <!-- Button -->
     <div class="flex w-full items-start mt-2">
       {#if ingelogd}
-      <a href="/account/medisch">
-        <CustomButton
-          text="Account"
-          rounded={true}
-          bgColor="#0C6639"
-          textColor="#FFFFFF"
-        />
-      </a>
-    {:else}
-      <CustomButton
-        text="Inloggen"
-        rounded={true}
-        bgColor="#0C3966"
-        textColor="#FFFFFF"
-        on:click={signIn}
-      />
-    {/if}
+        <a href="/account/medisch">
+          <CustomButton
+            text="Account"
+            rounded={true}
+            bgColor="#0C6639"
+            textColor="#FFFFFF"
+          />
+        </a>
+      {:else}
+        <a href="/login">
+          <CustomButton
+            text="Inloggen"
+            rounded={true}
+            bgColor="#0C3966"
+            textColor="#FFFFFF"
+          />
+        </a>
+      {/if}
     </div>
   </div>
 {/if}
