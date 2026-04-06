@@ -79,7 +79,7 @@
 
   <!-- ABOUT -->
   <div class="flex flex-row lg:px-16">
-  <div id="about" class="px-4 flex flex-col gap-8">
+  <div id="about" class="flex flex-col gap-8">
     <div id="top">
       <p class="text-accent text-lg font-semibold font-sans -my-2">
         Wat is SOStag
