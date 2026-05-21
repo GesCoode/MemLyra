@@ -1,0 +1,40 @@
+name: Deploy Hue-Do
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t hue-do .
+
+      - name: Save image
+        run: docker save hue-do > hue-do.tar
+
+      - name: Copy image to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_KEY }}
+          source: "hue-do.tar"
+          target: "/root"
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            docker rm -f hue-do || true
+            docker load < /root/hue-do.tar
+            docker run -d --restart unless-stopped --name hue-do -p 80:80 hue-do
