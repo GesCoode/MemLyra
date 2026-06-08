@@ -1,39 +1,59 @@
 <script lang="ts">
-  import logo from '$lib/assets/logo.svg';
-  import SliderButton from '$lib/components/form/SliderButton.svelte';
-  import ShareSection from '$lib/components/shareSection.svelte';
-  import { isDark, setDark } from '$lib/stores/theme';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
+  import favicon from '$lib/assets/favicon.svg';
+  import { isLoggedIn, signOut } from '$lib/stores/auth';
+
+  const publicLinks = [
+    { href: '/', label: 'Home' },
+    { href: '/login', label: 'Log in' },
+    { href: '/register', label: 'Register' }
+  ];
+
+  async function handleSignOut() {
+    signOut();
+    goto('/login');
+  }
 </script>
 
-<header
-  class="sticky top-0 z-50 border-b px-4 py-3 backdrop-blur-md transition-colors duration-300 sm:px-8 lg:px-12"
-  style="background: var(--nav-bg); border-color: var(--nav-border)"
->
-  <div class="mx-auto flex max-w-[1600px] items-center gap-4">
-    <img src={logo} alt="" class="h-10 w-auto" aria-hidden="true" />
-
-    <h1 class="flex-1 font-display text-2xl font-light tracking-tight text-heading sm:text-3xl">
-      Hue-Do .com
-    </h1>
-
-    <div class="flex items-center gap-2">
-      <ShareSection />
-
-      <div
-        class="flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-sm transition-colors duration-300"
-        style="background: var(--chip-bg); border-color: var(--chip-border)"
+<header class="sticky top-0 z-20 border-b border-border bg-background/70 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
+  <div class="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-6 sm:py-4">
+    <a href={$isLoggedIn ? '/dashboard' : '/'} class="group flex min-w-0 items-center gap-2 sm:gap-3">
+      <span
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface/80 transition group-hover:border-border-strong sm:h-10 sm:w-10"
       >
-        <span class="hidden text-sm text-muted sm:inline">Dark mode</span>
-        <span class="text-sm font-medium text-heading sm:hidden">Dark</span>
-        <SliderButton
-          checked={$isDark}
-          onChange={setDark}
-          ariaLabel="Toggle dark mode"
-          trueColor={$isDark ? '#8fb4e8' : '#6b5d48'}
-          falseColor={$isDark ? '#4a5568' : '#b8afa3'}
-          handleColor="#ffffff"
-        />
-      </div>
-    </div>
+        <img src={favicon} alt="" class="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+      </span>
+      <span class="truncate font-display text-lg font-semibold tracking-tight text-heading sm:text-xl">MemLyra</span>
+    </a>
+
+    <nav class="flex shrink-0 flex-wrap items-center justify-end gap-0.5 sm:gap-2">
+      {#if $isLoggedIn}
+        <a
+          class="nav-link {$page.url.pathname === '/dashboard' ? 'nav-link-active' : ''}"
+          href="/dashboard"
+        >
+          Dashboard
+        </a>
+        <a
+          class="nav-link {$page.url.pathname.startsWith('/dashboard/account') ? 'nav-link-active' : ''}"
+          href="/dashboard/account"
+        >
+          Account
+        </a>
+        <button class="nav-link nav-link-button" type="button" onclick={handleSignOut}>
+          Log out
+        </button>
+      {:else}
+        {#each publicLinks as link}
+          <a
+            class="nav-link {$page.url.pathname === link.href ? 'nav-link-active' : ''}"
+            href={link.href}
+          >
+            {link.label}
+          </a>
+        {/each}
+      {/if}
+    </nav>
   </div>
 </header>

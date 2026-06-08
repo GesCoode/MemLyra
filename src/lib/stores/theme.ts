@@ -1,48 +1,42 @@
 import { browser } from '$app/environment';
 import { writable } from 'svelte/store';
 
-const STORAGE_KEY = 'hueprint-theme';
+const STORAGE_KEY = 'memlyra-theme';
 
-declare global {
-  interface Window {
-    __HUEPRINT_THEME__?: boolean;
-  }
+export type ThemeMode = 'light' | 'dark';
+
+export const theme = writable<ThemeMode>('dark');
+
+function readStoredTheme(): ThemeMode {
+  if (!browser) return 'dark';
+
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored === 'light' || stored === 'dark') return stored;
+  return 'dark';
 }
 
-function readPreference(): boolean {
-  if (!browser) return false;
-  if (typeof window.__HUEPRINT_THEME__ === 'boolean') {
-    return window.__HUEPRINT_THEME__;
-  }
-  return localStorage.getItem(STORAGE_KEY) === 'dark';
-}
-
-function applyToDocument(isDark: boolean) {
+function applyTheme(mode: ThemeMode) {
   if (!browser) return;
-  document.documentElement.classList.toggle('dark', isDark);
-  localStorage.setItem(STORAGE_KEY, isDark ? 'dark' : 'light');
+  document.documentElement.dataset.theme = mode;
+  localStorage.setItem(STORAGE_KEY, mode);
 }
 
-function initialDark(): boolean {
-  if (browser && typeof window.__HUEPRINT_THEME__ === 'boolean') {
-    return window.__HUEPRINT_THEME__;
-  }
-  return false;
-}
-
-/** False during prerender; on client, matches app.html inline script before first paint. */
-export const isDark = writable(initialDark());
-
-/** Sync store + storage with the class already set in app.html. */
 export function initTheme() {
   if (!browser) return;
-  const dark = readPreference();
-  isDark.set(dark);
-  applyToDocument(dark);
+  const mode = readStoredTheme();
+  applyTheme(mode);
+  theme.set(mode);
 }
 
-export function setDark(value: boolean) {
-  isDark.set(value);
-  if (browser) window.__HUEPRINT_THEME__ = value;
-  applyToDocument(value);
+export function setTheme(mode: ThemeMode) {
+  applyTheme(mode);
+  theme.set(mode);
+}
+
+export function toggleTheme() {
+  theme.update((current) => {
+    const next: ThemeMode = current === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    return next;
+  });
 }

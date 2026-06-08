@@ -2,9 +2,9 @@
 FROM node:20 AS build
 
 WORKDIR /app
-COPY . .
-
+COPY package*.json ./
 RUN npm ci
+COPY . .
 RUN npm run build
 
 # Runtime stage

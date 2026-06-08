@@ -1,22 +1,18 @@
-<script lang="ts">
-  import logoNaked from '$lib/assets/logoNaked.svg';
-</script>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <p class="site-footer__copyright">MemLyra. All rights reserved.</p>
 
-<footer
-  class="relative z-10 px-4 py-10 transition-colors duration-300 sm:px-8 lg:px-12"
-  style="background: var(--footer-bg)"
->
-  <div class="mx-auto flex max-w-[1600px] items-start gap-4">
-    <img src={logoNaked} alt="" class="h-10 mt-1 w-auto shrink-0" aria-hidden="true" />
-
-    <div class="flex flex-col gap-0">
-      <p class="text-sm text-white/85 sm:text-base">For suggestions, questions and inquiries</p>
-      <a
-        href="mailto:contact@gesmoo.com"
-        class="text-base font-medium text-white transition-colors hover:text-[#a8e6cf]"
-      >
-        contact@gesmoo.com
-      </a>
-    </div>
+    <a class="site-footer__contact" href="mailto:contact@gesmoo.com">
+      <span class="site-footer__contact-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="m3 7 9 6 9-6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
+      <span class="site-footer__contact-body">
+        <span class="site-footer__contact-label">Contact</span>
+        <span class="site-footer__contact-email">contact@gesmoo.com</span>
+      </span>
+    </a>
   </div>
 </footer>

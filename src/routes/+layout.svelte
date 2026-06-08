@@ -1,23 +1,33 @@
 <script lang="ts">
   import './layout.css';
   import favicon from '$lib/assets/favicon.svg';
-  import Footer from '$lib/sections/Footer.svelte';
   import Navbar from '$lib/sections/Navbar.svelte';
+  import Footer from '$lib/sections/Footer.svelte';
+  import { initAuth } from '$lib/stores/auth';
+  import { initDecks } from '$lib/stores/decks';
+  import { initFlashcards } from '$lib/stores/flashcards';
+  import { initTags } from '$lib/stores/tags';
   import { initTheme } from '$lib/stores/theme';
 
   let { children } = $props();
 
-  if (typeof window !== 'undefined') initTheme();
+  if (typeof window !== 'undefined') {
+    initTheme();
+    initAuth();
+    initDecks();
+    initTags();
+    initFlashcards();
+  }
 </script>
 
 <svelte:head>
   <link rel="icon" href={favicon} />
-  <title>HueDo</title>
+  <title>MemLyra</title>
 </svelte:head>
 
-<Navbar />
+<div class="page-backdrop flex min-h-screen flex-col">
+  <Navbar />
 
-<div class="flex min-h-screen flex-col">
   <main class="flex-1">
     {@render children()}
   </main>
