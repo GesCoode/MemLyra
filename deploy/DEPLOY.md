@@ -1,56 +1,66 @@
-# Deployment (VPS)
+# MemLyra deployment (VPS)
 
 ## Stack
 
-- **App:** Docker (`app` on port 3001)
-- **Database:** PostgreSQL 16 (`app-db`, internal only)
+- **App:** Docker (`memlyra` on port 3001)
+- **Database:** PostgreSQL 16 (`memlyra-db`, internal only)
 - **Reverse proxy:** Nginx + Let's Encrypt
+- **Public URL:** https://memlyra.com
 
 ## `.env` (on server, never commit)
 
-Copy from `.env.example` and set production values:
-
 ```env
-ORIGIN=https://example.com
+ORIGIN=https://memlyra.com
 POSTGRES_PASSWORD=...
 SESSION_SECRET=...
-SMTP_HOST=smtp.example.com
+SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=noreply@example.com
-SMTP_PASS=...
-SMTP_FROM=My App <noreply@example.com>
+SMTP_USER=contact@gesmoo.com
+SMTP_PASS=<google-app-password>
+SMTP_FROM=MemLyra <noreply@gesmoo.com>
 ```
 
 ## Deploy updates
 
 ```bash
-cd ~/your-app
+cd ~/MemLyra
 git pull
 docker compose up -d --build
 ```
 
+### Run a database migration
+
+```bash
+docker exec -i memlyra-db psql -U memlyra -d memlyra < db/migrations/003_password_reset.sql
+```
+
 ## Nginx
 
-Config template: `deploy/nginx/app.conf`
+Config template: `deploy/nginx/memlyra.conf`
 
 On the server:
 
 ```bash
-sudo ln -sf /etc/nginx/sites-available/app /etc/nginx/sites-enabled/app
+sudo ln -sf /etc/nginx/sites-available/memlyra /etc/nginx/sites-enabled/memlyra
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
 SSL (first time):
 
 ```bash
-sudo certbot --nginx -d example.com -d www.example.com
+sudo certbot --nginx -d memlyra.com -d www.memlyra.com
 ```
+
+## Cloudflare
+
+- DNS: `memlyra.com` and `www` → server IP (proxied is fine)
+- SSL/TLS mode: **Full (strict)** (origin has a valid Let's Encrypt cert)
 
 ## Delete a test account
 
 ```bash
-docker exec -it app-db psql -U app -d app \
+docker exec -it memlyra-db psql -U memlyra -d memlyra \
   -c "DELETE FROM users WHERE email = 'you@example.com';"
 ```
 
