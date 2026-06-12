@@ -174,6 +174,35 @@
     box-shadow: 0 0 0 3px var(--focus-ring-color);
   }
 
+  .password-field__control {
+    @apply relative;
+  }
+
+  .password-field__input {
+    @apply pr-12;
+  }
+
+  .password-field__toggle {
+    @apply absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-muted transition;
+  }
+
+  .password-field__toggle:hover:not(:disabled) {
+    @apply text-heading;
+  }
+
+  .password-field__toggle:focus-visible {
+    outline: 2px solid var(--color-border-strong);
+    outline-offset: -2px;
+  }
+
+  .password-field__toggle svg {
+    @apply h-5 w-5;
+  }
+
+  .password-field__hint {
+    @apply text-xs leading-relaxed text-muted;
+  }
+
   .btn-primary {
     @apply inline-flex items-center justify-center rounded-xl px-5 py-3.5 text-sm font-bold tracking-wide transition;
     background: var(--color-action);
@@ -1069,6 +1098,118 @@
 
   .library-table-wrap {
     @apply overflow-visible rounded-xl border border-border;
+  }
+
+  .library-cards-host {
+    @apply grid gap-0;
+  }
+
+  .library-table-wrap--desktop {
+    @apply hidden md:block;
+  }
+
+  .library-mobile-cards {
+    @apply grid gap-3 md:hidden;
+  }
+
+  .library-mobile-cards__empty {
+    @apply rounded-xl border border-border px-4 py-10 text-center text-sm text-muted;
+  }
+
+  .library-mobile-card {
+    @apply rounded-xl border border-border bg-background/30 p-4;
+  }
+
+  .library-mobile-card__header {
+    @apply mb-3 flex items-center gap-3;
+  }
+
+  .library-mobile-card__check {
+    @apply flex shrink-0 items-center;
+  }
+
+  .library-mobile-card__index {
+    @apply text-xs font-bold uppercase tracking-[0.12em] text-muted;
+  }
+
+  .library-mobile-card__remove {
+    @apply ml-auto;
+  }
+
+  .library-mobile-card__sides {
+    @apply grid gap-3;
+  }
+
+  .library-mobile-card__side {
+    @apply min-w-0 rounded-lg border border-border/70 bg-surface/30 px-3 py-2.5;
+  }
+
+  .library-mobile-card__field {
+    @apply mt-3 space-y-2;
+  }
+
+  .library-mobile-card__label {
+    @apply block text-[0.68rem] font-bold uppercase tracking-[0.12em] text-muted;
+  }
+
+  .library-mobile-card__text {
+    @apply mt-1 break-words text-sm font-medium text-heading;
+  }
+
+  .library-mobile-card__stats {
+    @apply mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4;
+  }
+
+  .library-mobile-card__stat {
+    @apply flex min-h-11 items-center justify-between gap-2 rounded-lg border border-border/70 bg-surface/20 px-3 py-2 text-sm text-heading;
+  }
+
+  @media (max-width: 767px) {
+    .library-top-actions {
+      @apply flex-col;
+    }
+
+    .library-top-actions .btn-primary,
+    .library-top-actions .btn-secondary {
+      @apply w-full;
+    }
+
+    .library-list-controls {
+      @apply flex-col items-stretch;
+    }
+
+    .library-sort {
+      @apply w-full;
+    }
+
+    .library-sort__select {
+      @apply min-w-0 flex-1;
+    }
+
+    .library-pagination__controls {
+      @apply w-full flex-col items-stretch;
+    }
+
+    .library-pagination__nav {
+      @apply justify-between;
+    }
+
+    .collapsible-section__heading:has(.collapsible-section__symbol) .library-panel__desc {
+      padding-left: 0;
+    }
+
+    .tag-list-compact .tag-list__item {
+      @apply w-full;
+    }
+
+    .card-tag-editor,
+    .card-deck-editor {
+      @apply max-w-full min-w-0 w-full;
+    }
+
+    .card-deck-editor__current {
+      @apply max-w-full;
+    }
   }
 
   .library-table-scroll {

@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import AccountVerification from '$lib/components/AccountVerification.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+  import PasswordInput from '$lib/components/PasswordInput.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import {
     changePassword,
@@ -13,6 +14,7 @@
   } from '$lib/stores/auth';
   import { flashcards } from '$lib/stores/flashcards';
   import { removeLibrary, removeProgressMetrics } from '$lib/utils/accountActions';
+  import { validatePassword } from '$lib/utils/passwordPolicy';
   import { theme } from '$lib/stores/theme';
 
   type ConfirmAction = 'progress' | 'library' | 'account';
@@ -55,13 +57,14 @@
     passwordMessage = '';
     passwordError = '';
 
-    if (newPassword.length < 6) {
-      passwordError = 'New password must be at least 6 characters.';
+    if (newPassword !== confirmPassword) {
+      passwordError = 'New passwords do not match.';
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      passwordError = 'New passwords do not match.';
+    const policyError = validatePassword(newPassword);
+    if (policyError) {
+      passwordError = policyError;
       return;
     }
 
@@ -235,37 +238,17 @@
         <form class="account-profile-form" onsubmit={savePassword}>
           <label class="account-field">
             <span class="field-label">Current password</span>
-            <input
-              class="field-input"
-              type="password"
-              bind:value={currentPassword}
-              autocomplete="current-password"
-              required
-            />
+            <PasswordInput bind:value={currentPassword} autocomplete="current-password" />
           </label>
 
           <label class="account-field">
             <span class="field-label">New password</span>
-            <input
-              class="field-input"
-              type="password"
-              bind:value={newPassword}
-              autocomplete="new-password"
-              required
-              minlength="6"
-            />
+            <PasswordInput bind:value={newPassword} autocomplete="new-password" showHint />
           </label>
 
           <label class="account-field">
             <span class="field-label">Confirm new password</span>
-            <input
-              class="field-input"
-              type="password"
-              bind:value={confirmPassword}
-              autocomplete="new-password"
-              required
-              minlength="6"
-            />
+            <PasswordInput bind:value={confirmPassword} autocomplete="new-password" />
           </label>
 
           {#if passwordError}

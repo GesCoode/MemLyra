@@ -4,6 +4,7 @@
   import { page } from '$app/stores';
   import AccountVerification from '$lib/components/AccountVerification.svelte';
   import AuthCard from '$lib/components/AuthCard.svelte';
+  import PasswordInput from '$lib/components/PasswordInput.svelte';
 
   import { APP_NAME, SESSION_STORAGE_KEYS } from '$lib/app';
 
@@ -182,14 +183,10 @@
 
     <label class="block space-y-2">
       <span class="field-label">Password</span>
-      <input
-        class="field-input"
-        type="password"
+      <PasswordInput
         name="password"
         autocomplete="current-password"
-        placeholder="••••••••"
         bind:value={password}
-        required
         disabled={submitting}
       />
     </label>

@@ -2,6 +2,7 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { createUser, findUserByEmail } from '$lib/server/auth';
 import { sendVerificationEmail } from '$lib/server/mail';
 import { getAppOrigin } from '$lib/server/origin';
+import { validatePassword } from '$lib/utils/passwordPolicy';
 
 export const POST: RequestHandler = async ({ request, url }) => {
   let body: { email?: string; name?: string; password?: string };
@@ -20,8 +21,9 @@ export const POST: RequestHandler = async ({ request, url }) => {
     return json({ error: 'Enter an account name and email.' }, { status: 400 });
   }
 
-  if (password.length < 6) {
-    return json({ error: 'Password must be at least 6 characters.' }, { status: 400 });
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return json({ error: passwordError }, { status: 400 });
   }
 
   const existing = await findUserByEmail(email);

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { APP_NAME } from '$lib/app';
   import AuthCard from '$lib/components/AuthCard.svelte';
+  import PasswordInput from '$lib/components/PasswordInput.svelte';
+  import { validatePassword } from '$lib/utils/passwordPolicy';
 
   let name = $state('');
   let email = $state('');
@@ -15,6 +17,13 @@
     error = '';
     success = '';
     submitting = true;
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      error = passwordError;
+      submitting = false;
+      return;
+    }
 
     try {
       const response = await fetch('/api/auth/register', {
@@ -109,16 +118,13 @@
 
   <label class="block space-y-2">
     <span class="field-label">Password</span>
-    <input
-      class="field-input"
-      type="password"
+    <PasswordInput
       name="password"
       autocomplete="new-password"
-      placeholder="At least 6 characters"
-      minlength="6"
+      placeholder="Create a strong password"
       bind:value={password}
-      required
       disabled={submitting}
+      showHint
     />
   </label>
 </AuthCard>

@@ -84,7 +84,7 @@
   } | null>(null);
 
   let saveButtonEl = $state<HTMLButtonElement | null>(null);
-  let tableWrapEl = $state<HTMLDivElement | null>(null);
+  let cardsHostEl = $state<HTMLDivElement | null>(null);
   let wordAInputEl = $state<HTMLInputElement | null>(null);
 
   let sortedCards = $derived(
@@ -178,10 +178,10 @@
   }
 
   function playFlyAnimation(card: Flashcard) {
-    if (!browser || !saveButtonEl || !tableWrapEl) return;
+    if (!browser || !saveButtonEl || !cardsHostEl) return;
 
     const from = saveButtonEl.getBoundingClientRect();
-    const to = tableWrapEl.getBoundingClientRect();
+    const to = cardsHostEl.getBoundingClientRect();
 
     flyingCard = {
       sideA: card.sideA,
@@ -647,84 +647,166 @@
     </div>
     </div>
 
-    <div class="library-table-wrap" bind:this={tableWrapEl}>
-      <div class="library-table-scroll">
-    <table class="library-table">
-      <thead>
-        <tr>
-          {#if panelMode === 'delete'}
-            <th class="library-table__check"></th>
-          {/if}
-          <th>#</th>
-          <th>Side A</th>
-          <th>Side B</th>
-          <th>Deck</th>
-          <th>Tags</th>
-          <th>Times seen</th>
-          <th>Star</th>
-          <th>Mastered</th>
-          <th>Both ways</th>
-          <th class="library-table__actions"></th>
-        </tr>
-      </thead>
-      <tbody>
-        {#if displayCards.length === 0}
-          <tr>
-            <td colspan={panelMode === 'delete' ? 11 : 10} class="library-table__empty">
-              {#if $flashcards.length === 0}
-                No cards yet. Open Add cards above or import a list below.
+    <div class="library-cards-host" bind:this={cardsHostEl}>
+      <div class="library-table-wrap library-table-wrap--desktop">
+        <div class="library-table-scroll">
+          <table class="library-table">
+            <thead>
+              <tr>
+                {#if panelMode === 'delete'}
+                  <th class="library-table__check"></th>
+                {/if}
+                <th>#</th>
+                <th>Side A</th>
+                <th>Side B</th>
+                <th>Deck</th>
+                <th>Tags</th>
+                <th>Times seen</th>
+                <th>Star</th>
+                <th>Mastered</th>
+                <th>Both ways</th>
+                <th class="library-table__actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {#if displayCards.length === 0}
+                <tr>
+                  <td colspan={panelMode === 'delete' ? 11 : 10} class="library-table__empty">
+                    {#if $flashcards.length === 0}
+                      No cards yet. Open Add cards above or import a list below.
+                    {:else}
+                      No cards match this deck filter.
+                    {/if}
+                  </td>
+                </tr>
               {:else}
-                No cards match this deck filter.
+                {#each paginatedCards as card, index (card.id)}
+                  <tr class:library-row-new={highlightedId === card.id}>
+                    {#if panelMode === 'delete'}
+                      <td class="library-table__check">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(card.id)}
+                          onchange={() => toggleSelected(card.id)}
+                        />
+                      </td>
+                    {/if}
+                    <td class="library-table__index">{pageStart + index + 1}</td>
+                    <td>{card.sideA}</td>
+                    <td>{card.sideB}</td>
+                    <td class="library-table__deck">
+                      <CardDeckEditor cardId={card.id} deckId={card.deckId} decks={$decks} />
+                    </td>
+                    <td class="library-table__tag">
+                      <CardTagEditor cardId={card.id} tagIds={card.tagIds} tags={$tags} />
+                    </td>
+                    <td class="library-table__number">{card.timesSeen}</td>
+                    <td class="library-table__star">
+                      <StarIcon variant="regular" filled={card.star} class="h-4 w-4" />
+                    </td>
+                    <td class="library-table__star">
+                      <StarIcon variant="special" filled={card.specialStar} class="h-4 w-4" />
+                    </td>
+                    <td class="library-table__star">
+                      <StarIcon variant="bothWays" filled={card.bothWaysStar} class="h-4 w-4" />
+                    </td>
+                    <td class="library-table__actions">
+                      <button
+                        class="tag-list__delete"
+                        type="button"
+                        onclick={() => requestRemoveCard(card)}
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                {/each}
               {/if}
-            </td>
-          </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="library-mobile-cards">
+        {#if displayCards.length === 0}
+          <p class="library-mobile-cards__empty">
+            {#if $flashcards.length === 0}
+              No cards yet. Open Add cards above or import a list below.
+            {:else}
+              No cards match this deck filter.
+            {/if}
+          </p>
         {:else}
           {#each paginatedCards as card, index (card.id)}
-            <tr class:library-row-new={highlightedId === card.id}>
-              {#if panelMode === 'delete'}
-                <td class="library-table__check">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(card.id)}
-                    onchange={() => toggleSelected(card.id)}
-                  />
-                </td>
-              {/if}
-              <td class="library-table__index">{pageStart + index + 1}</td>
-              <td>{card.sideA}</td>
-              <td>{card.sideB}</td>
-              <td class="library-table__deck">
-                <CardDeckEditor cardId={card.id} deckId={card.deckId} decks={$decks} />
-              </td>
-              <td class="library-table__tag">
-                <CardTagEditor cardId={card.id} tagIds={card.tagIds} tags={$tags} />
-              </td>
-              <td class="library-table__number">{card.timesSeen}</td>
-              <td class="library-table__star">
-                <StarIcon variant="regular" filled={card.star} class="h-4 w-4" />
-              </td>
-              <td class="library-table__star">
-                <StarIcon variant="special" filled={card.specialStar} class="h-4 w-4" />
-              </td>
-              <td class="library-table__star">
-                <StarIcon variant="bothWays" filled={card.bothWaysStar} class="h-4 w-4" />
-              </td>
-              <td class="library-table__actions">
+            <article
+              class="library-mobile-card"
+              class:library-row-new={highlightedId === card.id}
+            >
+              <div class="library-mobile-card__header">
+                {#if panelMode === 'delete'}
+                  <label class="library-mobile-card__check">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(card.id)}
+                      onchange={() => toggleSelected(card.id)}
+                    />
+                    <span class="sr-only">Select card</span>
+                  </label>
+                {/if}
+                <span class="library-mobile-card__index">#{pageStart + index + 1}</span>
                 <button
-                  class="tag-list__delete"
+                  class="tag-list__delete library-mobile-card__remove"
                   type="button"
                   onclick={() => requestRemoveCard(card)}
                 >
                   Remove
                 </button>
-              </td>
-            </tr>
+              </div>
+
+              <div class="library-mobile-card__sides">
+                <div class="library-mobile-card__side">
+                  <span class="library-mobile-card__label">Side A</span>
+                  <p class="library-mobile-card__text">{card.sideA}</p>
+                </div>
+                <div class="library-mobile-card__side">
+                  <span class="library-mobile-card__label">Side B</span>
+                  <p class="library-mobile-card__text">{card.sideB}</p>
+                </div>
+              </div>
+
+              <div class="library-mobile-card__field">
+                <span class="library-mobile-card__label">Deck</span>
+                <CardDeckEditor cardId={card.id} deckId={card.deckId} decks={$decks} />
+              </div>
+
+              <div class="library-mobile-card__field">
+                <span class="library-mobile-card__label">Tags</span>
+                <CardTagEditor cardId={card.id} tagIds={card.tagIds} tags={$tags} />
+              </div>
+
+              <div class="library-mobile-card__stats">
+                <div class="library-mobile-card__stat">
+                  <span class="library-mobile-card__label">Seen</span>
+                  <span>{card.timesSeen}</span>
+                </div>
+                <div class="library-mobile-card__stat">
+                  <span class="library-mobile-card__label">Star</span>
+                  <StarIcon variant="regular" filled={card.star} class="h-4 w-4" />
+                </div>
+                <div class="library-mobile-card__stat">
+                  <span class="library-mobile-card__label">Mastered</span>
+                  <StarIcon variant="special" filled={card.specialStar} class="h-4 w-4" />
+                </div>
+                <div class="library-mobile-card__stat">
+                  <span class="library-mobile-card__label">Both ways</span>
+                  <StarIcon variant="bothWays" filled={card.bothWaysStar} class="h-4 w-4" />
+                </div>
+              </div>
+            </article>
           {/each}
         {/if}
-      </tbody>
-    </table>
       </div>
-  </div>
+    </div>
 
   {#if displayCards.length > 0}
     <div class="library-pagination">

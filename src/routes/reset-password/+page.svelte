@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import AuthCard from '$lib/components/AuthCard.svelte';
+  import PasswordInput from '$lib/components/PasswordInput.svelte';
 
   let { data } = $props();
 
@@ -13,8 +14,8 @@
     event.preventDefault();
     error = '';
 
-    if (password.length < 6) {
-      error = 'Password must be at least 6 characters.';
+    if (!password) {
+      error = 'Enter a new password.';
       return;
     }
 
@@ -80,31 +81,21 @@
 
     <label class="block space-y-2">
       <span class="field-label">New password</span>
-      <input
-        class="field-input"
-        type="password"
+      <PasswordInput
         name="password"
         autocomplete="new-password"
-        placeholder="••••••••"
         bind:value={password}
-        required
         disabled={submitting}
-        minlength="6"
       />
     </label>
 
     <label class="block space-y-2">
       <span class="field-label">Confirm new password</span>
-      <input
-        class="field-input"
-        type="password"
+      <PasswordInput
         name="confirmPassword"
         autocomplete="new-password"
-        placeholder="••••••••"
         bind:value={confirmPassword}
-        required
         disabled={submitting}
-        minlength="6"
       />
     </label>
   </AuthCard>

@@ -1,5 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { updateUserPassword } from '$lib/server/auth';
+import { validatePassword } from '$lib/utils/passwordPolicy';
 
 export const PATCH: RequestHandler = async ({ locals, request }) => {
   if (!locals.user) {
@@ -21,8 +22,9 @@ export const PATCH: RequestHandler = async ({ locals, request }) => {
     return json({ error: 'Enter your current password and a new password.' }, { status: 400 });
   }
 
-  if (newPassword.length < 6) {
-    return json({ error: 'New password must be at least 6 characters.' }, { status: 400 });
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) {
+    return json({ error: passwordError }, { status: 400 });
   }
 
   if (currentPassword === newPassword) {

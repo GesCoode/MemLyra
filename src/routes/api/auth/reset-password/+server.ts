@@ -17,8 +17,8 @@ export const POST: RequestHandler = async ({ request }) => {
     return json({ error: 'Missing reset token.' }, { status: 400 });
   }
 
-  if (password.length < 6) {
-    return json({ error: 'Password must be at least 6 characters.' }, { status: 400 });
+  if (!password) {
+    return json({ error: 'Enter a new password.' }, { status: 400 });
   }
 
   const updated = await resetPasswordWithToken(token, password);
