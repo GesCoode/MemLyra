@@ -19,12 +19,8 @@
     {:else}
       <h1 class="font-display text-3xl font-semibold text-heading">Invalid or expired link</h1>
       <p class="text-sm leading-relaxed text-muted">
-<<<<<<< HEAD
         This activation link is invalid or has expired. Register again, use forgot password to request
         a new activation link, or contact support if you need help.
-=======
-        This activation link is invalid or has expired. Register again if you need a new one.
->>>>>>> 83331a6e4e67dedbe41b4a2e32f131f7c2d2ad16
       </p>
       <div class="flex flex-wrap justify-center gap-3">
         <a class="btn-secondary inline-flex" href="/register">Register</a>
