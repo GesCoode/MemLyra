@@ -195,12 +195,32 @@
   </div>
 
   <div class="exercise-complete__actions">
-    <button class="btn-primary exercise-complete__action-primary" type="button" onclick={onTryAgain}>
-      Try same exercise again
+    <button class="btn-secondary exercise-complete__action-btn" type="button" onclick={onTryNew}>
+      <span class="exercise-complete__action-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" stroke-linecap="round" />
+          <path d="M2 14h4M10 8h4M18 16h4" stroke-linecap="round" />
+        </svg>
+      </span>
+      Next exercise
     </button>
-    <div class="exercise-complete__action-row">
-      <button class="btn-secondary" type="button" onclick={onTryNew}>Try new exercise</button>
-      <button class="btn-secondary" type="button" onclick={onDashboard}>Back to dashboard</button>
-    </div>
+    <button class="btn-secondary exercise-complete__action-btn" type="button" onclick={onTryAgain}>
+      <span class="exercise-complete__action-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M3 3v5h5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
+      Try exercise again
+    </button>
+    <button class="exercise-complete__action-exit" type="button" onclick={onDashboard}>
+      <span class="exercise-complete__action-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke-linecap="round" />
+          <path d="M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
+      Back to dashboard
+    </button>
   </div>
 </section>

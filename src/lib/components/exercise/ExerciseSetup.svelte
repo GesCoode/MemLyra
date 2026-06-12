@@ -1,7 +1,11 @@
 <script lang="ts">
+  import { onMount, tick } from 'svelte';
+  import { get } from 'svelte/store';
   import type { Deck } from '$lib/stores/decks';
+  import { decks as decksStore, loadDecks } from '$lib/stores/decks';
   import type { Flashcard } from '$lib/stores/flashcards';
   import type { Tag } from '$lib/stores/tags';
+  import { loadTags, tags as tagsStore } from '$lib/stores/tags';
   import {
     buildExerciseSession,
     filterFlashcards,
@@ -10,6 +14,10 @@
     type QuizMode,
     type SessionCard
   } from '$lib/utils/exercise';
+  import {
+    loadExerciseSetupPreferences,
+    saveExerciseSetupPreferences
+  } from '$lib/utils/exercisePreferences';
   import { tagChipStyles } from '$lib/utils/tagColors';
 
   let {
@@ -33,7 +41,8 @@
   let useMax = $state(false);
   let direction = $state<ExerciseDirection>('aToB');
   let quizMode = $state<QuizMode>('type');
-
+  let saveFeedback = $state<'idle' | 'saved'>('idle');
+  let saveFeedbackTimeout: ReturnType<typeof setTimeout> | undefined;
   let settings = $derived<ExerciseSettings>({
     deckId,
     tagIds: selectedTagIds,
@@ -90,6 +99,57 @@
     onStart(session, settings);
   }
 
+  function resolveDeckId(savedDeckId: string | 'all' | 'none', deckList: Deck[]) {
+    if (savedDeckId === 'all' || savedDeckId === 'none') return savedDeckId;
+    return deckList.some((deck) => deck.id === savedDeckId) ? savedDeckId : 'all';
+  }
+
+  function applySavedPreferences() {
+    const saved = loadExerciseSetupPreferences();
+    if (!saved) return;
+
+    const tagList = get(tagsStore);
+    const deckList = get(decksStore);
+
+    deckId = resolveDeckId(saved.deckId, deckList);
+    selectedTagIds = saved.tagIds.filter((tagId) => tagList.some((tag) => tag.id === tagId));
+    includeKnown = saved.includeKnown;
+    includeMastered = saved.includeMastered;
+    allowPeeking = saved.allowPeeking;
+    useMax = saved.useMax;
+    cardCount = saved.cardCount;
+    direction = saved.direction;
+    quizMode = saved.quizMode;
+  }
+
+  function saveConfiguration() {
+    saveExerciseSetupPreferences({
+      deckId,
+      tagIds: selectedTagIds,
+      includeKnown,
+      includeMastered,
+      allowPeeking,
+      useMax,
+      cardCount,
+      direction,
+      quizMode
+    });
+
+    saveFeedback = 'saved';
+    clearTimeout(saveFeedbackTimeout);
+    saveFeedbackTimeout = setTimeout(() => {
+      saveFeedback = 'idle';
+    }, 2000);
+  }
+
+  onMount(() => {
+    void (async () => {
+      await Promise.all([loadTags(), loadDecks()]);
+      await tick();
+      applySavedPreferences();
+    })();
+  });
+
   const directionOptions: { value: ExerciseDirection; label: string }[] = [
     { value: 'aToB', label: 'A → B' },
     { value: 'bToA', label: 'B → A' },
@@ -131,6 +191,12 @@
 
 <div class="exercise-setup glass-panel">
   <div class="exercise-setup__main">
+    <section class="exercise-setup__group" aria-labelledby="exercise-setup-filter-heading">
+      <header class="exercise-setup__group-header">
+        <h2 id="exercise-setup-filter-heading" class="exercise-setup__group-title">Filter flashcards</h2>
+      </header>
+
+      <div class="exercise-setup__group-body">
     <div class="exercise-setup__section">
       <span class="field-label">Deck</span>
       <div class="tag-chip-row tag-chip-row-picker">
@@ -165,30 +231,42 @@
       </div>
     </div>
 
-    {#if tags.length > 0}
-      <div class="exercise-setup__section">
-        <div class="exercise-setup__inline-label">
-          <span class="field-label">Tags</span>
+    <div class="exercise-setup__section">
+      <div class="exercise-setup__inline-label">
+        <span class="field-label">Tags</span>
+        {#if tags.length > 0}
           <button class="exercise-setup__mini-btn" type="button" onclick={toggleAllTags}>
             {allTagsSelected ? 'Deselect all tags' : 'Add all tags'}
           </button>
-        </div>
-        <div class="tag-chip-row tag-chip-row-picker">
-          {#each tags as tag (tag.id)}
-            <button
-              class="tag-chip tag-chip-colored {selectedTagIds.includes(tag.id)
-                ? 'tag-chip-colored-active'
-                : ''}"
-              type="button"
-              style={tagChipStyles(tag.color, selectedTagIds.includes(tag.id))}
-              onclick={() => toggleTag(tag.id)}
-            >
-              {tag.label}
-            </button>
-          {/each}
-        </div>
+        {/if}
       </div>
-    {/if}
+      <div class="tag-chip-row tag-chip-row-picker">
+        <button
+          class="tag-chip tag-chip-no-deck {selectedTagIds.length === 0
+            ? 'tag-chip-no-deck-active'
+            : ''}"
+          type="button"
+          onclick={() => (selectedTagIds = [])}
+        >
+          All tags
+        </button>
+        {#each tags as tag (tag.id)}
+          <button
+            class="tag-chip tag-chip-colored {selectedTagIds.includes(tag.id)
+              ? 'tag-chip-colored-active'
+              : ''}"
+            type="button"
+            style={tagChipStyles(tag.color, selectedTagIds.includes(tag.id))}
+            onclick={() => toggleTag(tag.id)}
+          >
+            {tag.label}
+          </button>
+        {/each}
+      </div>
+      {#if tags.length === 0}
+        <p class="exercise-setup__hint">No tags yet. Create tags in your library to filter by tag.</p>
+      {/if}
+    </div>
 
     <div class="exercise-setup__section">
       <span class="field-label">Flashcard pool</span>
@@ -237,6 +315,69 @@
           <span class="exercise-filter-toggle__switch" aria-hidden="true"></span>
         </button>
 
+      </div>
+    </div>
+
+        <p class="exercise-setup__filter-summary">
+          <span class="exercise-setup__filter-summary-count">{matchingCount}</span>
+          flashcard{matchingCount === 1 ? '' : 's'} match your filters
+        </p>
+      </div>
+    </section>
+
+    <section class="exercise-setup__group" aria-labelledby="exercise-setup-session-heading">
+      <header class="exercise-setup__group-header">
+        <h2 id="exercise-setup-session-heading" class="exercise-setup__group-title">Exercise setup</h2>
+      </header>
+
+      <div class="exercise-setup__group-body">
+    <div class="exercise-setup__session-row">
+      <div class="exercise-setup__section">
+        <span class="field-label">Cards in session</span>
+        <div class="exercise-setup__count-row">
+          <input
+            class="field-input exercise-setup__count-input"
+            type="number"
+            min="1"
+            value={useMax ? matchingCount : cardCount}
+            disabled={useMax}
+            oninput={handleCountInput}
+          />
+          <button
+            class="btn-secondary shrink-0"
+            type="button"
+            class:btn-primary={useMax}
+            onclick={setMax}
+          >
+            Max ({matchingCount})
+          </button>
+        </div>
+        {#if useMax}
+          <p class="exercise-setup__hint">
+            All flashcards matching the current filter will be shuffled into the session.
+          </p>
+        {/if}
+      </div>
+
+      <div class="exercise-setup__section">
+        <span class="field-label">Direction</span>
+        <div class="exercise-option-row">
+          {#each directionOptions as option}
+            <button
+              class="exercise-option {direction === option.value ? 'exercise-option-active' : ''}"
+              type="button"
+              onclick={() => (direction = option.value)}
+            >
+              {option.label}
+            </button>
+          {/each}
+        </div>
+      </div>
+    </div>
+
+    <div class="exercise-setup__section">
+      <span class="field-label">Options</span>
+      <div class="exercise-filter-toggles">
         <button
           class="exercise-filter-toggle"
           class:exercise-filter-toggle-active={allowPeeking}
@@ -260,48 +401,6 @@
           </span>
           <span class="exercise-filter-toggle__switch" aria-hidden="true"></span>
         </button>
-      </div>
-    </div>
-
-    <div class="exercise-setup__section">
-      <span class="field-label">Cards in session</span>
-      <div class="exercise-setup__count-row">
-        <input
-          class="field-input exercise-setup__count-input"
-          type="number"
-          min="1"
-          value={useMax ? matchingCount : cardCount}
-          disabled={useMax}
-          oninput={handleCountInput}
-        />
-        <button
-          class="btn-secondary shrink-0"
-          type="button"
-          class:btn-primary={useMax}
-          onclick={setMax}
-        >
-          Max ({matchingCount})
-        </button>
-      </div>
-      {#if useMax}
-        <p class="exercise-setup__hint">
-          All flashcards matching the current filter will be shuffled into the session.
-        </p>
-      {/if}
-    </div>
-
-    <div class="exercise-setup__section">
-      <span class="field-label">Direction</span>
-      <div class="exercise-option-row">
-        {#each directionOptions as option}
-          <button
-            class="exercise-option {direction === option.value ? 'exercise-option-active' : ''}"
-            type="button"
-            onclick={() => (direction = option.value)}
-          >
-            {option.label}
-          </button>
-        {/each}
       </div>
     </div>
 
@@ -349,16 +448,28 @@
         {/each}
       </div>
     </div>
+      </div>
+    </section>
   </div>
 
-  <div class="exercise-setup__footer">
+  <footer class="exercise-setup__footer">
     <div class="exercise-setup__footer-actions">
       <p class="exercise-setup__match-count">
         {sessionCount} flashcard{sessionCount === 1 ? '' : 's'} in this exercise
       </p>
-      <button class="btn-primary shrink-0" type="button" disabled={sessionCount === 0} onclick={startExercise}>
-        Start exercise
-      </button>
+      <div class="exercise-setup__footer-buttons">
+        <button
+          class="btn-secondary"
+          type="button"
+          aria-live="polite"
+          onclick={saveConfiguration}
+        >
+          {saveFeedback === 'saved' ? 'Setup saved' : 'Save setup'}
+        </button>
+        <button class="btn-primary" type="button" disabled={sessionCount === 0} onclick={startExercise}>
+          Start exercise
+        </button>
+      </div>
     </div>
-  </div>
+  </footer>
 </div>

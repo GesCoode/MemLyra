@@ -36,8 +36,8 @@
   let sortDirection = $state<SortDirection>('desc');
   let selectedIds = $state<string[]>([]);
   let wordListOpen = $state(true);
-  let decksOpen = $state(true);
-  let tagsOpen = $state(true);
+  let decksOpen = $state(false);
+  let tagsOpen = $state(false);
   let importOpen = $state(false);
 
   let wordA = $state('');
@@ -52,6 +52,7 @@
   let deckFilter = $state('all');
   let pageSize = $state(20);
   let currentPage = $state(1);
+  let expandedMobileCardIds = $state<string[]>([]);
 
   let tagLabel = $state('');
   let tagError = $state('');
@@ -85,7 +86,20 @@
 
   let saveButtonEl = $state<HTMLButtonElement | null>(null);
   let cardsHostEl = $state<HTMLDivElement | null>(null);
+  let cardsHostMinHeight = $state(0);
   let wordAInputEl = $state<HTMLInputElement | null>(null);
+
+  function measureCardsHostHeight() {
+    if (!browser || !cardsHostEl) return;
+    const height = Math.ceil(cardsHostEl.getBoundingClientRect().height);
+    if (height > cardsHostMinHeight) {
+      cardsHostMinHeight = height;
+    }
+  }
+
+  function resetCardsHostMinHeight() {
+    cardsHostMinHeight = 0;
+  }
 
   let sortedCards = $derived(
     sortFlashcards($flashcards, $tags, sortField, sortDirection, $decks)
@@ -119,6 +133,33 @@
     }
   });
 
+  $effect(() => {
+    currentPage;
+    pageSize;
+    deckFilter;
+    sortField;
+    sortDirection;
+    panelMode;
+    expandedMobileCardIds = [];
+  });
+
+  $effect(() => {
+    pageSize;
+    deckFilter;
+    sortField;
+    sortDirection;
+    displayCards.length;
+    resetCardsHostMinHeight();
+    queueMicrotask(measureCardsHostHeight);
+  });
+
+  $effect(() => {
+    paginatedCards;
+    panelMode;
+    currentPage;
+    queueMicrotask(measureCardsHostHeight);
+  });
+
   const sortOptions: { value: SortField; label: string }[] = [
     { value: 'deck', label: 'Deck' },
     { value: 'tag', label: 'Tags' },
@@ -134,7 +175,7 @@
     return $flashcards.filter((card) => card.deckId === deckId).length;
   }
 
-  function selectAddDeck(deckId: string) {
+  function selectAddDeck(deckId: string | null) {
     addDeckId = deckId;
   }
 
@@ -217,11 +258,6 @@
   async function handleAddCard(event: SubmitEvent) {
     event.preventDefault();
     addError = '';
-
-    if ($decks.length > 0 && !addDeckId) {
-      addError = 'Select a deck for this card.';
-      return;
-    }
 
     const card = await createFlashcard(wordA, wordB, addTagIds, addDeckId);
     if (!card) {
@@ -456,6 +492,16 @@
   function handlePageSizeChange() {
     currentPage = 1;
   }
+
+  function isMobileCardExpanded(cardId: string) {
+    return expandedMobileCardIds.includes(cardId);
+  }
+
+  function toggleMobileCard(cardId: string) {
+    expandedMobileCardIds = expandedMobileCardIds.includes(cardId)
+      ? expandedMobileCardIds.filter((id) => id !== cardId)
+      : [...expandedMobileCardIds, cardId];
+  }
 </script>
 
 <ConfirmDialog
@@ -508,14 +554,14 @@
           type="button"
           onclick={toggleAddForm}
         >
-          {addFormOpen ? 'Hide add cards' : 'Add cards'}
+          {addFormOpen ? 'Hide add card' : 'Add card'}
         </button>
         <button
           class={panelMode === 'delete' ? 'btn-primary' : 'btn-secondary'}
           type="button"
           onclick={toggleDeleteMode}
         >
-          Delete cards
+          Delete card(s)
         </button>
         {#if panelMode === 'delete'}
           <button
@@ -547,27 +593,30 @@
             </label>
           </div>
 
-          {#if $decks.length > 0}
-            <div class="library-field">
-              <span class="field-label">Deck</span>
-              <div class="tag-chip-row tag-chip-row-picker">
-                {#each $decks as deck (deck.id)}
-                  <button
-                    class="tag-chip tag-chip-colored tag-chip-deck {addDeckId === deck.id
-                      ? 'tag-chip-colored-active'
-                      : ''}"
-                    type="button"
-                    style={tagChipStyles(deck.color, addDeckId === deck.id)}
-                    onclick={() => selectAddDeck(deck.id)}
-                  >
-                    {deck.label}
-                  </button>
-                {/each}
-              </div>
+          <div class="library-field">
+            <span class="field-label">Deck</span>
+            <div class="tag-chip-row tag-chip-row-picker">
+              <button
+                class="tag-chip tag-chip-no-deck {addDeckId === null ? 'tag-chip-no-deck-active' : ''}"
+                type="button"
+                onclick={() => selectAddDeck(null)}
+              >
+                No deck
+              </button>
+              {#each $decks as deck (deck.id)}
+                <button
+                  class="tag-chip tag-chip-colored tag-chip-deck {addDeckId === deck.id
+                    ? 'tag-chip-colored-active'
+                    : ''}"
+                  type="button"
+                  style={tagChipStyles(deck.color, addDeckId === deck.id)}
+                  onclick={() => selectAddDeck(deck.id)}
+                >
+                  {deck.label}
+                </button>
+              {/each}
             </div>
-          {:else}
-            <p class="library-message library-message-error">Create a deck below before adding cards.</p>
-          {/if}
+          </div>
 
           {#if $tags.length > 0}
             <div class="tag-chip-row">
@@ -586,12 +635,7 @@
             </div>
           {/if}
 
-          <button
-            class="btn-primary"
-            type="submit"
-            disabled={$decks.length === 0}
-            bind:this={saveButtonEl}
-          >
+          <button class="btn-primary" type="submit" bind:this={saveButtonEl}>
             Save card
           </button>
           </form>
@@ -647,7 +691,12 @@
     </div>
     </div>
 
-    <div class="library-cards-host" bind:this={cardsHostEl}>
+    <div class="library-list-frame">
+    <div
+      class="library-cards-host"
+      bind:this={cardsHostEl}
+      style:min-height={cardsHostMinHeight > 0 ? `${cardsHostMinHeight}px` : undefined}
+    >
       <div class="library-table-wrap library-table-wrap--desktop">
         <div class="library-table-scroll">
           <table class="library-table">
@@ -673,7 +722,7 @@
                 <tr>
                   <td colspan={panelMode === 'delete' ? 11 : 10} class="library-table__empty">
                     {#if $flashcards.length === 0}
-                      No cards yet. Open Add cards above or import a list below.
+                      No cards yet. Open Add card above or import a list below.
                     {:else}
                       No cards match this deck filter.
                     {/if}
@@ -731,20 +780,28 @@
         {#if displayCards.length === 0}
           <p class="library-mobile-cards__empty">
             {#if $flashcards.length === 0}
-              No cards yet. Open Add cards above or import a list below.
+              No cards yet. Open Add card above or import a list below.
             {:else}
               No cards match this deck filter.
             {/if}
           </p>
         {:else}
           {#each paginatedCards as card, index (card.id)}
+            {@const expanded = isMobileCardExpanded(card.id)}
             <article
               class="library-mobile-card"
+              class:library-mobile-card--expanded={expanded}
               class:library-row-new={highlightedId === card.id}
             >
-              <div class="library-mobile-card__header">
+              <div
+                class="library-mobile-card__bar"
+                class:library-mobile-card__bar--delete={panelMode === 'delete'}
+              >
                 {#if panelMode === 'delete'}
-                  <label class="library-mobile-card__check">
+                  <label
+                    class="library-mobile-card__check"
+                    onclick={(event) => event.stopPropagation()}
+                  >
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(card.id)}
@@ -753,53 +810,90 @@
                     <span class="sr-only">Select card</span>
                   </label>
                 {/if}
-                <span class="library-mobile-card__index">#{pageStart + index + 1}</span>
+
+                <div class="library-mobile-card__bar-spacer" aria-hidden="true"></div>
+
+                <button
+                  class="library-mobile-card__trigger"
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-label={expanded ? 'Collapse card details' : 'Expand card details'}
+                  onclick={() => toggleMobileCard(card.id)}
+                >
+                  <span class="library-mobile-card__index">#{pageStart + index + 1}</span>
+                  <span class="library-mobile-card__summary">
+                    <span class="library-mobile-card__summary-a">{card.sideA}</span>
+                    <span class="library-mobile-card__summary-arrow" aria-hidden="true">→</span>
+                    <span class="library-mobile-card__summary-b">{card.sideB}</span>
+                  </span>
+                </button>
+
+                <span
+                  class="library-mobile-card__chevron"
+                  class:library-mobile-card__chevron--expanded={expanded}
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+
                 <button
                   class="tag-list__delete library-mobile-card__remove"
                   type="button"
-                  onclick={() => requestRemoveCard(card)}
+                  onclick={(event) => {
+                    event.stopPropagation();
+                    requestRemoveCard(card);
+                  }}
                 >
                   Remove
                 </button>
               </div>
 
-              <div class="library-mobile-card__sides">
-                <div class="library-mobile-card__side">
-                  <span class="library-mobile-card__label">Side A</span>
-                  <p class="library-mobile-card__text">{card.sideA}</p>
-                </div>
-                <div class="library-mobile-card__side">
-                  <span class="library-mobile-card__label">Side B</span>
-                  <p class="library-mobile-card__text">{card.sideB}</p>
-                </div>
-              </div>
+              <div
+                class="library-mobile-card__details-wrap"
+                class:library-mobile-card__details-wrap--open={expanded}
+              >
+                <div class="library-mobile-card__details">
+                  <div class="library-mobile-card__sides">
+                    <div class="library-mobile-card__side">
+                      <span class="library-mobile-card__label">Side A</span>
+                      <p class="library-mobile-card__text">{card.sideA}</p>
+                    </div>
+                    <div class="library-mobile-card__side">
+                      <span class="library-mobile-card__label">Side B</span>
+                      <p class="library-mobile-card__text">{card.sideB}</p>
+                    </div>
+                  </div>
 
-              <div class="library-mobile-card__field">
-                <span class="library-mobile-card__label">Deck</span>
-                <CardDeckEditor cardId={card.id} deckId={card.deckId} decks={$decks} />
-              </div>
+                  <div class="library-mobile-card__field">
+                    <span class="library-mobile-card__label">Deck</span>
+                    <CardDeckEditor cardId={card.id} deckId={card.deckId} decks={$decks} />
+                  </div>
 
-              <div class="library-mobile-card__field">
-                <span class="library-mobile-card__label">Tags</span>
-                <CardTagEditor cardId={card.id} tagIds={card.tagIds} tags={$tags} />
-              </div>
+                  <div class="library-mobile-card__field">
+                    <span class="library-mobile-card__label">Tags</span>
+                    <CardTagEditor cardId={card.id} tagIds={card.tagIds} tags={$tags} />
+                  </div>
 
-              <div class="library-mobile-card__stats">
-                <div class="library-mobile-card__stat">
-                  <span class="library-mobile-card__label">Seen</span>
-                  <span>{card.timesSeen}</span>
-                </div>
-                <div class="library-mobile-card__stat">
-                  <span class="library-mobile-card__label">Star</span>
-                  <StarIcon variant="regular" filled={card.star} class="h-4 w-4" />
-                </div>
-                <div class="library-mobile-card__stat">
-                  <span class="library-mobile-card__label">Mastered</span>
-                  <StarIcon variant="special" filled={card.specialStar} class="h-4 w-4" />
-                </div>
-                <div class="library-mobile-card__stat">
-                  <span class="library-mobile-card__label">Both ways</span>
-                  <StarIcon variant="bothWays" filled={card.bothWaysStar} class="h-4 w-4" />
+                  <div class="library-mobile-card__stats">
+                    <div class="library-mobile-card__stat">
+                      <span class="library-mobile-card__label">Seen</span>
+                      <span>{card.timesSeen}</span>
+                    </div>
+                    <div class="library-mobile-card__stat">
+                      <span class="library-mobile-card__label">Star</span>
+                      <StarIcon variant="regular" filled={card.star} class="h-4 w-4" />
+                    </div>
+                    <div class="library-mobile-card__stat">
+                      <span class="library-mobile-card__label">Mastered</span>
+                      <StarIcon variant="special" filled={card.specialStar} class="h-4 w-4" />
+                    </div>
+                    <div class="library-mobile-card__stat">
+                      <span class="library-mobile-card__label">Both ways</span>
+                      <StarIcon variant="bothWays" filled={card.bothWaysStar} class="h-4 w-4" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </article>
@@ -809,7 +903,7 @@
     </div>
 
   {#if displayCards.length > 0}
-    <div class="library-pagination">
+    <div class="library-pagination library-list-frame__pagination">
       <p class="library-pagination__info">
         Showing {pageStart + 1}–{pageEnd} of {displayCards.length}
       </p>
@@ -855,6 +949,7 @@
       </div>
     </div>
   {/if}
+    </div>
   </CollapsibleSection>
 </section>
 
@@ -991,10 +1086,16 @@
 </section>
 
 <section class="library-panel">
-  <CollapsibleSection symbol="import" title="Import cards" bind:open={importOpen}>
-    <form class="space-y-4" onsubmit={handleImport}>
-      <div class="library-field">
+  <CollapsibleSection
+    symbol="import"
+    title="Import cards"
+    description="Paste a list or upload a .txt file."
+    bind:open={importOpen}
+  >
+    <form class="import-form" onsubmit={handleImport}>
+      <div class="import-form__deck library-field">
         <span class="field-label">Assign to deck</span>
+        <p class="import-form__deck-hint">Imported cards will use this deck unless a line includes tags.</p>
         <div class="tag-chip-row tag-chip-row-picker">
           <button
             class="tag-chip tag-chip-no-deck {importDeckId === null ? 'tag-chip-no-deck-active' : ''}"
@@ -1018,54 +1119,111 @@
         </div>
       </div>
 
-      <div class="import-file-row">
-        <label class="import-file-picker">
-          <span class="btn-secondary">Choose .txt file</span>
-          <input
-            class="import-file-input"
-            type="file"
-            accept=".txt,text/plain"
-            onchange={handleImportFile}
-          />
-        </label>
-        {#if importFileName}
-          <span class="import-file-name">{importFileName}</span>
-        {/if}
+      <div class="import-form__methods">
+        <section class="import-method" aria-labelledby="import-file-heading">
+          <div class="import-method__heading">
+            <span class="import-method__icon import-method__icon-file" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" />
+                <path d="M14 3v5h5M12 18v-6M9 15h6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <div class="import-method__intro">
+              <h3 id="import-file-heading" class="import-method__title">From .txt file</h3>
+              <p class="import-method__desc">
+                Upload a plain text file. Its contents load into the editor so you can review before importing.
+              </p>
+            </div>
+          </div>
+
+          <div class="import-method__body">
+            <p class="import-method__format">
+              One card per line:
+              <code class="library-code">wordA,wordB</code>
+              or
+              <code class="library-code">wordA,wordB,tag1;tag2;tag3</code>
+            </p>
+            <label class="import-file-picker">
+              <span class="btn-secondary">Choose .txt file</span>
+              <input
+                class="import-file-input"
+                type="file"
+                accept=".txt,text/plain"
+                onchange={handleImportFile}
+              />
+            </label>
+            {#if importFileName}
+              <p class="import-method__file-loaded">
+                Loaded <span class="import-file-name">{importFileName}</span>
+              </p>
+            {/if}
+            {#if importFileError}
+              <p class="library-message library-message-error">{importFileError}</p>
+            {/if}
+          </div>
+        </section>
+
+        <div class="import-form__divider" aria-hidden="true">
+          <span>Or</span>
+        </div>
+
+        <section class="import-method" aria-labelledby="import-paste-heading">
+          <div class="import-method__heading">
+            <span class="import-method__icon import-method__icon-paste" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <rect x="4" y="4" width="16" height="16" rx="2" />
+                <path d="M8 9h8M8 13h8M8 17h5" stroke-linecap="round" />
+              </svg>
+            </span>
+            <div class="import-method__intro">
+              <h3 id="import-paste-heading" class="import-method__title">Type or paste</h3>
+              <p class="import-method__desc">
+                Write your card list directly in the field below — handy for quick edits or smaller batches.
+              </p>
+            </div>
+          </div>
+
+          <div class="import-method__body">
+            <p class="import-method__format">
+              One card per line:
+              <code class="library-code">wordA,wordB</code>
+              or
+              <code class="library-code">wordA,wordB,tag1;tag2;tag3</code>
+            </p>
+            <label class="import-method__field">
+              <span class="sr-only">Card list</span>
+              <textarea
+                class="field-input import-method__textarea min-h-36 resize-y font-mono text-sm"
+                placeholder={"hello,hola\nworld,wereld,basics;chapter1"}
+                bind:value={importText}
+              ></textarea>
+            </label>
+          </div>
+        </section>
       </div>
 
-      {#if importFileError}
-        <p class="library-message library-message-error">{importFileError}</p>
-      {/if}
+      <div class="import-form__actions">
+        <button class="btn-primary" type="submit" disabled={!importText.trim()}>
+          Run import
+        </button>
 
-      <p class="text-sm text-muted">
-        One card per line: <code class="library-code">wordA,wordB</code> or
-        <code class="library-code">wordA,wordB,tag1;tag2;tag3</code>
-      </p>
-      <textarea
-        class="field-input min-h-36 resize-y font-mono text-sm"
-        placeholder={"hello,hola\nworld,wereld,basics;chapter1"}
-        bind:value={importText}
-      ></textarea>
-      <button class="btn-primary" type="submit" disabled={!importText.trim()}>
-        Run import
-      </button>
-
-      {#if importResult}
-        <p
-          class="library-message {importResult.imported > 0
-            ? 'library-message-success'
-            : 'library-message-error'}"
-        >
-          {#if importResult.errors.length > 0}
-            {importResult.errors[0]}
-          {:else}
-            Imported {importResult.imported} card{importResult.imported === 1 ? '' : 's'}.
-            {#if importResult.skipped > 0}
-              Skipped {importResult.skipped}.
+        {#if importResult}
+          <p
+            class="library-message {importResult.imported > 0
+              ? 'library-message-success'
+              : 'library-message-error'}"
+          >
+            {#if importResult.errors.length > 0}
+              {importResult.errors[0]}
+            {:else}
+              Imported {importResult.imported} card{importResult.imported === 1 ? '' : 's'}.
+              {#if importResult.skipped > 0}
+                Skipped {importResult.skipped}.
+              {/if}
             {/if}
-          {/if}
-        </p>
-      {/if}
+          </p>
+        {/if}
+      </div>
     </form>
   </CollapsibleSection>
 </section>

@@ -7,6 +7,8 @@ services:
       POSTGRES_USER: memlyra
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: memlyra
+    ports:
+      - '5432:5432'
     volumes:
       - memlyra_pg:/var/lib/postgresql/data
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql

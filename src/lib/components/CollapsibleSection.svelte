@@ -6,12 +6,14 @@
   let {
     title,
     description = '',
+    descriptionEmphasis = '',
     symbol,
     open = $bindable(true),
     children
   }: {
     title: string;
     description?: string;
+    descriptionEmphasis?: string;
     symbol?: SectionSymbol;
     open?: boolean;
     children: Snippet;
@@ -62,8 +64,17 @@
         {/if}
         <h2 class="library-panel__title">{title}</h2>
       </div>
-      {#if description}
-        <p class="library-panel__desc">{description}</p>
+      {#if descriptionEmphasis || description}
+        <p class="library-panel__desc">
+          {#if descriptionEmphasis}
+            <span class="library-panel__desc-lead">{descriptionEmphasis}</span>
+          {/if}
+          {#if description}
+            {#if descriptionEmphasis}
+              {' '}
+            {/if}{description}
+          {/if}
+        </p>
       {/if}
     </div>
     <span

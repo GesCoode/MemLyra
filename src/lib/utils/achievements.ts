@@ -38,7 +38,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     id: 'learned-1000',
     category: 'learned',
     title: 'Flashcard master',
-    description: 'Learn 1,000 flashcards',
+    description: 'Learn 1000 flashcards',
     threshold: 1000
   },
   {

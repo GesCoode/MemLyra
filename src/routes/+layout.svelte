@@ -7,6 +7,7 @@
   import { clearDecks, loadDecks } from '$lib/stores/decks';
   import { clearFlashcards, loadFlashcards } from '$lib/stores/flashcards';
   import { clearTags, loadTags } from '$lib/stores/tags';
+  import { exerciseSessionActive } from '$lib/stores/exerciseUi';
   import { initTheme } from '$lib/stores/theme';
 
   let { children, data } = $props();
@@ -35,12 +36,19 @@
   <title>MemLyra</title>
 </svelte:head>
 
-<div class="page-backdrop flex min-h-screen flex-col">
-  <Navbar user={data.user} />
+<div
+  class="page-backdrop flex min-h-screen flex-col"
+  class:page-backdrop--exercise={$exerciseSessionActive}
+>
+  {#if !$exerciseSessionActive}
+    <Navbar user={data.user} />
+  {/if}
 
-  <main class="flex-1">
+  <main class="flex-1" class:main--exercise={$exerciseSessionActive}>
     {@render children()}
   </main>
 
-  <Footer />
+  {#if !$exerciseSessionActive}
+    <Footer />
+  {/if}
 </div>

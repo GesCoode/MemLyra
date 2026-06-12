@@ -1,10 +1,13 @@
 import { redirect } from '@sveltejs/kit';
 import { SESSION_COOKIE, validateSession } from '$lib/server/auth';
+import { ensureDevAdminAccount } from '$lib/server/devAdmin';
 import type { Handle } from '@sveltejs/kit';
 
 const protectedPrefixes = ['/dashboard'];
 
 export const handle: Handle = async ({ event, resolve }) => {
+  await ensureDevAdminAccount();
+
   const sessionId = event.cookies.get(SESSION_COOKIE);
 
   try {

@@ -6,6 +6,7 @@ import {
   setSessionCookie,
   verifyPassword
 } from '$lib/server/auth';
+import { ensureDevAdminAccount, resolveDevLoginEmail } from '$lib/server/devAdmin';
 
 export const POST: RequestHandler = async ({ request, cookies, url }) => {
   let body: { email?: string; password?: string };
@@ -23,7 +24,9 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
     return json({ error: 'Enter your email and password.' }, { status: 400 });
   }
 
-  const account = await findUserByEmail(email);
+  await ensureDevAdminAccount();
+
+  const account = await findUserByEmail(resolveDevLoginEmail(email));
   if (!account || !(await verifyPassword(password, account.password_hash))) {
     return json({ error: 'Invalid email or password.' }, { status: 401 });
   }

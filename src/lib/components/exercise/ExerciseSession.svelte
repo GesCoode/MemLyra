@@ -7,6 +7,7 @@
   import type { Deck } from '$lib/stores/decks';
   import type { Flashcard } from '$lib/stores/flashcards';
   import type { Tag } from '$lib/stores/tags';
+  import { exerciseSessionActive } from '$lib/stores/exerciseUi';
   import { recordExerciseResult, recordExerciseSeen } from '$lib/stores/flashcards';
   import { filterFlashcards } from '$lib/utils/exercise';
   import {
@@ -16,6 +17,8 @@
     type SessionCard
   } from '$lib/utils/exercise';
   import { scoreGuess } from '$lib/utils/scoreGuess';
+
+  type AnswerOutcome = 'correct' | 'wrong' | 'pending';
 
   let {
     session,
@@ -38,6 +41,7 @@
   } = $props();
 
   const startingSession = session;
+  const CARD_FLIP_MS = 650;
   let filteredPool = $derived(filterFlashcards(pool, settings));
 
   let queue = $state<SessionCard[]>(startingSession.map((card) => card));
@@ -59,31 +63,46 @@
   let answerInput = $state<HTMLInputElement | null>(null);
   let confirmEmptySkip = $state(false);
   let confirmEndQuiz = $state(false);
-  let answerOutcomes = $state<Array<'correct' | 'wrong'>>([]);
+  let answerOutcomes = $state<AnswerOutcome[]>([]);
   let skipCount = $state(0);
   let reportSkipCount = $state(0);
   let peekCount = $state(0);
   let cardsShown = $state(1);
+  let revealingAnswer = $state(false);
   const sessionStartedAt = Date.now();
   let sessionDurationMs = $state(0);
 
-  let isPeeking = $derived(settings.allowPeeking && flipped && !showResult);
+  let answerRevealedForGrade = $state(false);
+  let isPeeking = $derived(
+    settings.allowPeeking && flipped && !showResult && !answerRevealedForGrade
+  );
   let canPeek = $derived(
     settings.allowPeeking &&
       !showResult &&
-      (settings.quizMode === 'type' || settings.quizMode === 'multipleChoice')
+      !answerRevealedForGrade &&
+      (settings.quizMode === 'type' ||
+        settings.quizMode === 'multipleChoice' ||
+        settings.quizMode === 'selfGrade' ||
+        settings.quizMode === 'anki')
   );
 
   let currentCard = $derived(queue[currentIndex]);
   let segmentWidth = $derived(queue.length > 0 ? 100 / queue.length : 0);
   let mcOptions = $derived(
-    currentCard ? buildMultipleChoiceOptions(currentCard, filteredPool) : []
+    currentCard
+      ? buildMultipleChoiceOptions(currentCard, filteredPool, pool, queue)
+      : []
+  );
+  let gradedOutcomes = $derived(
+    answerOutcomes.filter((outcome): outcome is 'correct' | 'wrong' => outcome !== 'pending')
   );
 
   function resetCardState() {
     flipped = false;
+    answerRevealedForGrade = false;
     typedAnswer = '';
     showResult = false;
+    revealingAnswer = false;
     lastPercent = null;
     lastCorrect = null;
     selectedChoice = null;
@@ -120,14 +139,53 @@
     finished = true;
   }
 
+  function recordOutcome(correct: boolean) {
+    if (!currentCard || gradedSessionIds.has(currentCard.id)) return;
+
+    answerOutcomes.push(correct ? 'correct' : 'wrong');
+    gradedSessionIds = new Set(gradedSessionIds).add(currentCard.id);
+    if (correct) correctCount += 1;
+    else wrongCount += 1;
+  }
+
+  function markCurrentCardPending() {
+    if (!currentCard || gradedSessionIds.has(currentCard.id)) return;
+    if (answerOutcomes.at(-1) === 'pending') return;
+
+    answerOutcomes.push('pending');
+  }
+
+  function resolvePendingOutcome(correct: boolean) {
+    if (!currentCard) return;
+
+    const lastOutcome = answerOutcomes.at(-1);
+    if (lastOutcome === 'pending') {
+      answerOutcomes[answerOutcomes.length - 1] = correct ? 'correct' : 'wrong';
+    } else if (!gradedSessionIds.has(currentCard.id)) {
+      answerOutcomes.push(correct ? 'correct' : 'wrong');
+    }
+
+    if (!gradedSessionIds.has(currentCard.id)) {
+      gradedSessionIds = new Set(gradedSessionIds).add(currentCard.id);
+      if (correct) correctCount += 1;
+      else wrongCount += 1;
+    }
+  }
+
+  function removePendingOutcomeIfPresent() {
+    if (answerOutcomes.at(-1) === 'pending') {
+      answerOutcomes.pop();
+    }
+  }
+
   function recordAndAdvance(correct: boolean) {
     if (!currentCard) return;
 
+    if (!gradedSessionIds.has(currentCard.id)) {
+      recordOutcome(correct);
+    }
+
     void recordExerciseResult(currentCard.cardId, correct, currentCard.direction);
-    if (correct) correctCount += 1;
-    else wrongCount += 1;
-    answerOutcomes.push(correct ? 'correct' : 'wrong');
-    gradedSessionIds = new Set(gradedSessionIds).add(currentCard.id);
 
     if (allCardsGraded()) {
       finishSession();
@@ -137,29 +195,12 @@
     advanceToNextCard();
   }
 
-  function advanceWithoutGrade() {
-    if (!currentCard) return;
-
-    void recordExerciseSeen(currentCard.cardId);
-
-    if (currentIndex >= queue.length - 1) {
-      finishSession();
-      return;
-    }
-
-    entering = true;
-    resetCardState();
-    currentIndex += 1;
-    cardsShown += 1;
-
-    window.setTimeout(() => {
-      entering = false;
-    }, 420);
-  }
-
   function flipCard() {
     if (finished || showResult) return;
     if (settings.quizMode === 'type' || settings.quizMode === 'multipleChoice') return;
+
+    answerRevealedForGrade = true;
+    markCurrentCardPending();
     flipped = true;
   }
 
@@ -170,19 +211,52 @@
   }
 
   function handleCardInteraction() {
-    if (finished || !currentCard || !showResult) return;
+    if (finished || !currentCard) return;
 
-    if (settings.quizMode === 'type' || settings.quizMode === 'multipleChoice') {
+    if (
+      showResult &&
+      (settings.quizMode === 'type' || settings.quizMode === 'multipleChoice')
+    ) {
       nextFromResult();
+      return;
+    }
+
+    if (
+      !showResult &&
+      !flipped &&
+      (settings.quizMode === 'selfGrade' || settings.quizMode === 'anki')
+    ) {
+      flipCard();
     }
   }
 
   let cardInteractive = $derived(
-    showResult && (settings.quizMode === 'type' || settings.quizMode === 'multipleChoice')
+    (showResult && (settings.quizMode === 'type' || settings.quizMode === 'multipleChoice')) ||
+      (!showResult &&
+        !flipped &&
+        (settings.quizMode === 'selfGrade' || settings.quizMode === 'anki'))
   );
 
+  async function revealWithFlip(correct: boolean, percent: number | null) {
+    if (!currentCard || showResult || revealingAnswer) return;
+
+    revealingAnswer = true;
+    lastCorrect = correct;
+    lastPercent = percent;
+    recordOutcome(correct);
+    flipped = true;
+
+    await new Promise((resolve) => setTimeout(resolve, CARD_FLIP_MS));
+
+    if (currentCard) {
+      showResult = true;
+    }
+
+    revealingAnswer = false;
+  }
+
   function submitTypedAnswer() {
-    if (!currentCard || showResult) return;
+    if (!currentCard || showResult || revealingAnswer) return;
 
     if (!typedAnswer.trim()) {
       if (!confirmEmptySkip) {
@@ -197,10 +271,7 @@
 
     confirmEmptySkip = false;
     const result = scoreGuess(typedAnswer, currentCard.answer);
-    lastPercent = result.percent;
-    lastCorrect = result.isCorrect;
-    showResult = true;
-    flipped = true;
+    void revealWithFlip(result.isCorrect, result.percent);
   }
 
   function handleTypedAnswerInput() {
@@ -214,21 +285,28 @@
   }
 
   function pickChoice(choice: string) {
-    if (!currentCard || showResult) return;
+    if (!currentCard || showResult || revealingAnswer) return;
     selectedChoice = choice;
-    lastCorrect = choice === currentCard.answer;
-    lastPercent = lastCorrect ? 100 : 0;
-    showResult = true;
-    flipped = true;
+    const correct = choice.trim() === currentCard.answer.trim();
+    void revealWithFlip(correct, correct ? 100 : 0);
   }
 
   function gradeSelf(correct: boolean) {
-    recordAndAdvance(correct);
+    if (!currentCard) return;
+
+    resolvePendingOutcome(correct);
+    void recordExerciseResult(currentCard.cardId, correct, currentCard.direction);
+
+    if (allCardsGraded()) {
+      finishSession();
+      return;
+    }
+
+    advanceToNextCard();
   }
 
   function gradeAnki(level: 'again' | 'good' | 'easy') {
-    const correct = level !== 'again';
-    recordAndAdvance(correct);
+    gradeSelf(level !== 'again');
   }
 
   function nextFromResult() {
@@ -236,8 +314,25 @@
     recordAndAdvance(lastCorrect);
   }
 
+  function tryAgainLaterFromResult() {
+    if (!showResult || !currentCard || lastCorrect !== false) return;
+
+    skipCount += 1;
+    const card = queue[currentIndex];
+    queue = [...queue.slice(0, currentIndex), ...queue.slice(currentIndex + 1), card];
+
+    entering = true;
+    resetCardState();
+    cardsShown += 1;
+
+    window.setTimeout(() => {
+      entering = false;
+    }, 420);
+  }
+
   function skipWithoutGrade() {
-    advanceWithoutGrade();
+    removePendingOutcomeIfPresent();
+    deferCard();
   }
 
   function deferCard() {
@@ -290,6 +385,26 @@
     if (settings.quizMode === 'multipleChoice' && showResult) {
       event.preventDefault();
       nextFromResult();
+      return;
+    }
+
+    if (settings.quizMode === 'selfGrade') {
+      if (!flipped) {
+        event.preventDefault();
+        flipCard();
+        return;
+      }
+
+      if (isPeeking) {
+        event.preventDefault();
+        togglePeek();
+        return;
+      }
+
+      if (answerRevealedForGrade) {
+        event.preventDefault();
+        skipWithoutGrade();
+      }
     }
   }
 
@@ -307,35 +422,85 @@
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
   });
+
+  $effect(() => {
+    exerciseSessionActive.set(!finished);
+    return () => exerciseSessionActive.set(false);
+  });
 </script>
 
 <div
   class="exercise-session"
-  class:exercise-session--mc={settings.quizMode === 'multipleChoice' && !showResult}
+  class:exercise-session--mc={settings.quizMode === 'multipleChoice'}
 >
   {#if !finished}
     <div class="exercise-session__toolbar">
-      <button class="btn-secondary exercise-session__end-btn" type="button" onclick={requestEndQuiz}>
-        End quiz
+      <button
+        class="btn-secondary exercise-session__end-btn"
+        type="button"
+        aria-label="End quiz"
+        title="End quiz"
+        onclick={requestEndQuiz}
+      >
+        <span class="exercise-toolbar-icon exercise-toolbar-icon--end" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke-linecap="round" />
+            <path d="M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <span class="exercise-session__end-btn-text">End quiz</span>
       </button>
-
-      <div class="exercise-session__toolbar-actions">
       <button
         class="exercise-session__toggle"
+        class:exercise-session__toggle--hidden={hideProgress}
         type="button"
+        aria-pressed={!hideProgress}
+        aria-label="{hideProgress ? 'Show' : 'Hide'} progress"
+        title="{hideProgress ? 'Show' : 'Hide'} progress"
         onclick={() => (hideProgress = !hideProgress)}
       >
-        {hideProgress ? 'Show' : 'Hide'} progress
+        <span class="exercise-toolbar-icon" aria-hidden="true">
+          <svg
+            class="exercise-toolbar-icon__glyph"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+          >
+            <rect x="3" y="9" width="18" height="6" rx="3" />
+            <rect x="3" y="9" width="12" height="6" rx="3" fill="currentColor" stroke="none" />
+          </svg>
+          <svg class="exercise-toolbar-icon__strike" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 19L19 5" stroke-linecap="round" />
+          </svg>
+        </span>
+        <span class="exercise-session__toggle-label-full"
+          >{hideProgress ? 'Show' : 'Hide'} progress</span
+        >
       </button>
       <button
         class="exercise-session__toggle"
+        class:exercise-session__toggle--hidden={hideCounter}
         type="button"
+        aria-pressed={!hideCounter}
+        aria-label="{hideCounter ? 'Show' : 'Hide'} counter"
+        title="{hideCounter ? 'Show' : 'Hide'} counter"
         onclick={() => (hideCounter = !hideCounter)}
       >
-        {hideCounter ? 'Show' : 'Hide'} counter
+        <span class="exercise-toolbar-icon exercise-toolbar-icon--counter" aria-hidden="true">
+          <span class="exercise-toolbar-icon__glyph exercise-toolbar-counter">
+            <span class="exercise-toolbar-counter__good">✓</span>
+            <span class="exercise-toolbar-counter__wrong">✕</span>
+          </span>
+          <svg class="exercise-toolbar-icon__strike" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 19L19 5" stroke-linecap="round" />
+          </svg>
+        </span>
+        <span class="exercise-session__toggle-label-full"
+          >{hideCounter ? 'Show' : 'Hide'} counter</span
+        >
       </button>
     </div>
-  </div>
   {/if}
 
   {#if !finished && (!hideProgress || !hideCounter)}
@@ -349,7 +514,7 @@
                   class="exercise-progress__segment"
                   class:exercise-progress__segment-correct={!hideCounter && outcome === 'correct'}
                   class:exercise-progress__segment-wrong={!hideCounter && outcome === 'wrong'}
-                  class:exercise-progress__segment-neutral={hideCounter}
+                  class:exercise-progress__segment-neutral={hideCounter || outcome === 'pending'}
                   style="width: {segmentWidth}%"
                 ></div>
               {/each}
@@ -380,7 +545,7 @@
       {peekCount}
       {sessionDurationMs}
       cardsTimed={cardsShown}
-      {answerOutcomes}
+      answerOutcomes={gradedOutcomes}
       {endedEarly}
       {decks}
       {tags}
@@ -400,25 +565,38 @@
         interactive={cardInteractive}
         peeking={isPeeking}
         onclick={handleCardInteraction}
+        {showResult}
+        isCorrect={lastCorrect}
         userAnswer={settings.quizMode === 'type' && showResult && typedAnswer.trim()
           ? typedAnswer
-          : ''}
-        resultMeta={showResult && settings.quizMode === 'type' && lastPercent !== null
-          ? `${lastPercent}% letter match`
           : ''}
       />
     </div>
 
     {#if !showResult && !flipped && (settings.quizMode === 'selfGrade' || settings.quizMode === 'anki')}
       <div class="exercise-session__card-actions">
-        <button class="btn-secondary exercise-skip-btn" type="button" onclick={deferCard}>
+        {#if canPeek}
+          <button class="btn-secondary exercise-peek-btn" type="button" onclick={togglePeek}>
+            Peek answer
+          </button>
+        {/if}
+        <button class="exercise-skip-btn" type="button" onclick={deferCard}>
+          <span class="exercise-skip-btn__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path d="M5 5v14" stroke-linecap="round" />
+              <path d="M9 12h12" stroke-linecap="round" />
+              <path d="M17 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
           Skip
         </button>
       </div>
-    {:else if !showResult && canPeek && settings.quizMode !== 'multipleChoice'}
+    {/if}
+
+    {#if isPeeking && (settings.quizMode === 'selfGrade' || settings.quizMode === 'anki')}
       <div class="exercise-session__card-actions">
         <button class="btn-secondary exercise-peek-btn" type="button" onclick={togglePeek}>
-          {flipped ? 'Hide answer' : 'Peek answer'}
+          Hide answer
         </button>
       </div>
     {/if}
@@ -440,14 +618,30 @@
           oninput={handleTypedAnswerInput}
           autocomplete="off"
         />
-        <button class="btn-secondary shrink-0" type="button" onclick={deferCard}>Skip</button>
-        <button
-          class="btn-primary shrink-0"
-          class:btn-warning={confirmEmptySkip}
-          type="submit"
-        >
-          {confirmEmptySkip ? 'Are you sure?' : 'Check'}
-        </button>
+        <div class="exercise-type-form__actions">
+          {#if canPeek}
+            <button class="btn-secondary exercise-peek-btn" type="button" onclick={togglePeek}>
+              {flipped ? 'Hide answer' : 'Peek answer'}
+            </button>
+          {/if}
+          <button class="exercise-skip-btn" type="button" onclick={deferCard}>
+            <span class="exercise-skip-btn__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path d="M5 5v14" stroke-linecap="round" />
+                <path d="M9 12h12" stroke-linecap="round" />
+                <path d="M17 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            Skip
+          </button>
+          <button
+            class="btn-primary exercise-type-form__submit"
+            class:btn-warning={confirmEmptySkip}
+            type="submit"
+          >
+            {confirmEmptySkip ? 'Are you sure?' : 'Check'}
+          </button>
+        </div>
       </form>
       {#if confirmEmptySkip}
         <p class="exercise-skip-confirm">Are you sure you want to skip this card?</p>
@@ -462,12 +656,19 @@
               {flipped ? 'Hide answer' : 'Peek answer'}
             </button>
           {/if}
-          <button class="btn-secondary exercise-skip-btn exercise-mc-toolbar__btn" type="button" onclick={deferCard}>
+          <button class="exercise-skip-btn exercise-mc-toolbar__btn" type="button" onclick={deferCard}>
+            <span class="exercise-skip-btn__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path d="M5 5v14" stroke-linecap="round" />
+                <path d="M9 12h12" stroke-linecap="round" />
+                <path d="M17 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
             Skip
           </button>
         </div>
         <div class="exercise-mc-grid">
-          {#each mcOptions as option (option)}
+          {#each mcOptions as option, index (`${index}-${option}`)}
             <button class="exercise-mc-option" type="button" onclick={() => pickChoice(option)}>
               {option}
             </button>
@@ -477,34 +678,51 @@
     {/if}
 
     {#if showResult && (settings.quizMode === 'type' || settings.quizMode === 'multipleChoice')}
-      <div class="exercise-result" class:exercise-result-correct={lastCorrect} class:exercise-result-wrong={!lastCorrect}>
-        <p>{lastCorrect ? 'Correct' : 'Not quite'}</p>
+      <div class="exercise-result-actions">
+        <button class="btn-primary w-full sm:w-auto" type="button" onclick={nextFromResult}>
+          {lastCorrect ? 'Next card' : 'Continue'}
+        </button>
+        {#if !lastCorrect}
+          <button class="btn-secondary w-full sm:w-auto" type="button" onclick={tryAgainLaterFromResult}>
+            Try again later
+          </button>
+        {/if}
+      </div>
+
+      <div
+        class="exercise-result"
+        class:exercise-result-correct={lastCorrect}
+        class:exercise-result-wrong={!lastCorrect}
+      >
+        <p class="exercise-result__title">{lastCorrect ? 'Correct!' : 'Wrong'}</p>
         {#if settings.quizMode === 'type' && lastPercent !== null}
           <p class="exercise-result__meta">{lastPercent}% letter match</p>
         {/if}
+        {#if !lastCorrect}
+          <p class="exercise-result__hint">Review the answer on the card above.</p>
+        {/if}
       </div>
-      <button class="btn-primary w-full sm:w-auto" type="button" onclick={nextFromResult}>Next card</button>
     {/if}
 
-    {#if flipped && settings.quizMode === 'selfGrade' && !showResult}
+    {#if flipped && answerRevealedForGrade && settings.quizMode === 'selfGrade' && !showResult}
       <div class="exercise-grade-row">
         <button class="btn-secondary" type="button" onclick={skipWithoutGrade}>Next card</button>
         <button class="btn-secondary exercise-grade-wrong" type="button" onclick={() => gradeSelf(false)}>
           I had it wrong
         </button>
-        <button class="btn-primary exercise-grade-correct" type="button" onclick={() => gradeSelf(true)}>
+        <button class="btn-secondary exercise-grade-correct" type="button" onclick={() => gradeSelf(true)}>
           I had it correct
         </button>
       </div>
     {/if}
 
-    {#if flipped && settings.quizMode === 'anki' && !showResult}
+    {#if flipped && answerRevealedForGrade && settings.quizMode === 'anki' && !showResult}
       <div class="exercise-grade-row">
         <button class="btn-secondary exercise-grade-wrong" type="button" onclick={() => gradeAnki('again')}>
           Again
         </button>
         <button class="btn-secondary" type="button" onclick={() => gradeAnki('good')}>Good</button>
-        <button class="btn-primary exercise-grade-correct" type="button" onclick={() => gradeAnki('easy')}>
+        <button class="btn-secondary exercise-grade-correct" type="button" onclick={() => gradeAnki('easy')}>
           Easy
         </button>
       </div>
@@ -515,6 +733,10 @@
     {/if}
     </div>
     {/if}
+  {/if}
+
+  {#if !finished}
+    <p class="exercise-session__keyboard-tip">Tip: Use enter key to proceed</p>
   {/if}
 </div>
 

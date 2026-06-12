@@ -7,8 +7,9 @@
     interactive = false,
     onclick,
     userAnswer = '',
-    resultMeta = '',
-    peeking = false
+    peeking = false,
+    showResult = false,
+    isCorrect = null
   }: {
     prompt: string;
     answer: string;
@@ -17,50 +18,86 @@
     interactive?: boolean;
     onclick?: () => void;
     userAnswer?: string;
-    resultMeta?: string;
     peeking?: boolean;
+    showResult?: boolean;
+    isCorrect?: boolean | null;
   } = $props();
+
+  let haloHidden = $state(false);
+
+  function handleFlipTransitionStart(event: TransitionEvent) {
+    if (event.propertyName !== 'transform') return;
+    haloHidden = true;
+  }
+
+  function handleFlipTransitionEnd(event: TransitionEvent) {
+    if (event.propertyName !== 'transform') return;
+    haloHidden = false;
+  }
+
+  function handleSceneClick() {
+    if (interactive) onclick?.();
+  }
+
+  function handleSceneKeydown(event: KeyboardEvent) {
+    if (!interactive) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onclick?.();
+    }
+  }
 </script>
-
-{#snippet cardFaces()}
-  <div class="exercise-card" class:exercise-card-flipped={flipped}>
-    <div class="exercise-card-face exercise-card-front">
-      <p class="exercise-card__label">Prompt</p>
-      <p class="exercise-card__text">{prompt}</p>
-    </div>
-
-    <div class="exercise-card-face exercise-card-back">
-      {#if userAnswer}
-        <p class="exercise-card__label">Your answer</p>
-        <p class="exercise-card__user-text">{userAnswer}</p>
-      {/if}
-      <p class="exercise-card__label" class:exercise-card__label-spaced={!!userAnswer}>
-        {peeking ? 'Peek' : 'Answer'}
-      </p>
-      <p class="exercise-card__text">{answer}</p>
-      {#if resultMeta}
-        <p class="exercise-card__meta">{resultMeta}</p>
-      {/if}
-    </div>
-  </div>
-{/snippet}
 
 <div class="exercise-stage">
   <div class="exercise-card-shadow" class:exercise-card-shadow-active={flipped}></div>
 
-  <div class="exercise-card-enter-wrap" class:exercise-card-enter-wrap-active={entering}>
-    {#if interactive}
-      <button
-        type="button"
-        class="exercise-card-scene exercise-card-scene-interactive"
-        onclick={() => onclick?.()}
+  <div
+    class="exercise-card-enter-wrap"
+    class:exercise-card-enter-wrap-active={entering}
+    class:exercise-card-enter-wrap--halo-hidden={haloHidden}
+  >
+    <!-- Keep a stable wrapper so flip transitions are not destroyed on state change -->
+    <div
+      class="exercise-card-scene"
+      class:exercise-card-scene-interactive={interactive}
+      role={interactive ? 'button' : undefined}
+      tabindex={interactive ? 0 : undefined}
+      aria-label={interactive ? (flipped ? 'Show prompt card' : 'Flip to answer card') : undefined}
+      onclick={handleSceneClick}
+      onkeydown={handleSceneKeydown}
+    >
+      <div
+        class="exercise-card-flip"
+        class:exercise-card-flip--active={flipped}
+        ontransitionstart={handleFlipTransitionStart}
+        ontransitionend={handleFlipTransitionEnd}
       >
-        {@render cardFaces()}
-      </button>
-    {:else}
-      <div class="exercise-card-scene">
-        {@render cardFaces()}
+        <div class="exercise-card-side exercise-card-side--prompt">
+          <p class="exercise-card__label">Prompt</p>
+          <p class="exercise-card__text">{prompt}</p>
+        </div>
+
+        <div
+          class="exercise-card-side exercise-card-side--answer"
+          class:exercise-card-side--correct={showResult && isCorrect === true}
+          class:exercise-card-side--wrong={showResult && isCorrect === false}
+        >
+          <p class="exercise-card__label">Prompt</p>
+          <p class="exercise-card__prompt-muted">{prompt}</p>
+
+          <p class="exercise-card__label exercise-card__label-answer">
+            {peeking && !showResult ? 'Peek' : 'Answer'}
+          </p>
+          <p class="exercise-card__text exercise-card__text--answer">{answer}</p>
+
+          {#if userAnswer}
+            <p class="exercise-card__user-attempt">
+              <span class="exercise-card__user-attempt-label">You wrote</span>
+              {userAnswer}
+            </p>
+          {/if}
+        </div>
       </div>
-    {/if}
+    </div>
   </div>
 </div>

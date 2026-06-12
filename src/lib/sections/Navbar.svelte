@@ -29,7 +29,7 @@
       >
         <img src={favicon} alt="" class="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
       </span>
-      <span class="truncate font-display text-lg font-semibold tracking-tight text-heading sm:text-xl">MemLyra</span>
+      <span class="navbar-brand__title">MemLyra</span>
     </a>
 
     <nav class="flex shrink-0 flex-wrap items-center justify-end gap-0.5 sm:gap-2">

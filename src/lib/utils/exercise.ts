@@ -93,23 +93,66 @@ export function cloneExerciseSession(session: SessionCard[]): SessionCard[] {
   }));
 }
 
-export function buildMultipleChoiceOptions(
-  sessionCard: SessionCard,
-  pool: Flashcard[]
-): string[] {
-  const sameColumnAnswers = pool
+function normalizeAnswer(value: string): string {
+  return value.trim();
+}
+
+function answerForDirection(card: Flashcard, direction: CardDirection): string {
+  return normalizeAnswer(direction === 'aToB' ? card.sideB : card.sideA);
+}
+
+function collectWrongAnswers(cards: Flashcard[], sessionCard: SessionCard): string[] {
+  const correct = normalizeAnswer(sessionCard.answer);
+
+  return cards
     .filter((card) => card.id !== sessionCard.cardId)
-    .map((card) => (sessionCard.direction === 'aToB' ? card.sideB : card.sideA))
-    .filter((answer) => answer !== sessionCard.answer);
+    .map((card) => answerForDirection(card, sessionCard.direction))
+    .filter((answer) => answer.length > 0 && answer !== correct);
+}
 
-  const uniqueWrong = [...new Set(sameColumnAnswers)];
-  const wrong = shuffle(uniqueWrong).slice(0, 2);
+function collectWrongAnswersFromSession(
+  sessionCards: SessionCard[],
+  sessionCard: SessionCard
+): string[] {
+  const correct = normalizeAnswer(sessionCard.answer);
 
-  while (wrong.length < 2) {
-    wrong.push(wrong.length === 0 ? '—' : '??');
+  return sessionCards
+    .filter(
+      (card) => card.cardId !== sessionCard.cardId && card.direction === sessionCard.direction
+    )
+    .map((card) => normalizeAnswer(card.answer))
+    .filter((answer) => answer.length > 0 && answer !== correct);
+}
+
+function mergeUniqueAnswers(...groups: string[][]): string[] {
+  const merged: string[] = [];
+
+  for (const group of groups) {
+    for (const answer of group) {
+      if (!merged.includes(answer)) {
+        merged.push(answer);
+      }
+    }
   }
 
-  return shuffle([sessionCard.answer, ...wrong.slice(0, 2)]);
+  return merged;
+}
+
+export function buildMultipleChoiceOptions(
+  sessionCard: SessionCard,
+  filteredPool: Flashcard[],
+  allCards: Flashcard[] = filteredPool,
+  sessionCards: SessionCard[] = []
+): string[] {
+  const correct = normalizeAnswer(sessionCard.answer);
+  const uniqueWrong = mergeUniqueAnswers(
+    collectWrongAnswers(filteredPool, sessionCard),
+    collectWrongAnswers(allCards, sessionCard),
+    collectWrongAnswersFromSession(sessionCards, sessionCard)
+  );
+  const wrong = shuffle(uniqueWrong).slice(0, 2);
+
+  return shuffle([correct, ...wrong]);
 }
 
 const quizModeLabels: Record<QuizMode, string> = {

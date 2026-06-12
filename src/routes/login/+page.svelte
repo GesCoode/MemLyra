@@ -171,9 +171,9 @@
       <span class="field-label">Email</span>
       <input
         class="field-input"
-        type="email"
+        type="text"
         name="email"
-        autocomplete="email"
+        autocomplete="username"
         placeholder="you@example.com"
         bind:value={email}
         required
