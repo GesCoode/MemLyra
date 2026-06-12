@@ -1,6 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { cookieIsSecure, createUser, findUserByEmail } from '$lib/server/auth';
-import { createBaseDeckForUser } from '$lib/server/decks';
+import { createUser, findUserByEmail } from '$lib/server/auth';
 import { sendVerificationEmail } from '$lib/server/mail';
 import { getAppOrigin } from '$lib/server/origin';
 
@@ -31,7 +30,6 @@ export const POST: RequestHandler = async ({ request, url }) => {
   }
 
   const { user, verificationToken } = await createUser(email, name, password);
-  await createBaseDeckForUser(user.id);
 
   const verifyUrl = `${getAppOrigin(url)}/verify?token=${verificationToken}`;
 

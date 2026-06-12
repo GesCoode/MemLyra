@@ -3,7 +3,7 @@ import { env } from '$env/dynamic/private';
 import { randomBytes } from 'node:crypto';
 import { getSql } from '$lib/server/db';
 
-export const SESSION_COOKIE = 'memlyra_session';
+export const SESSION_COOKIE = 'app_session';
 const SESSION_DAYS = 30;
 const VERIFICATION_DAYS = 2;
 const RESET_HOURS = 1;

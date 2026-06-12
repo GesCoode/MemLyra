@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { APP_NAME } from '$lib/app';
   import AuthCard from '$lib/components/AuthCard.svelte';
 
   let email = $state('');
@@ -37,7 +38,7 @@
 </script>
 
 <svelte:head>
-  <title>Forgot password · MemLyra</title>
+  <title>Forgot password · {APP_NAME}</title>
 </svelte:head>
 
 <AuthCard

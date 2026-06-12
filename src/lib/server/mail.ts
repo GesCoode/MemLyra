@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env } from '$env/dynamic/private';
+import { APP_NAME } from '$lib/app';
 
 function smtpConfigured(): boolean {
   return Boolean(env.SMTP_HOST && env.SMTP_FROM);
@@ -53,8 +54,13 @@ async function sendEmail(options: {
   }
 }
 
+<<<<<<< HEAD
 export async function sendVerificationEmail(to: string, verifyUrl: string): Promise<boolean> {
   const subject = 'Activate your MemLyra account';
+=======
+export async function sendVerificationEmail(to: string, verifyUrl: string): Promise<void> {
+  const subject = `Activate your ${APP_NAME} account`;
+>>>>>>> 83331a6e4e67dedbe41b4a2e32f131f7c2d2ad16
   const text = `Click this link to activate your account: ${verifyUrl}\n\nIf this was not you, then ignore this mail.`;
   const html = `
     <p>Click this link to activate your account:</p>
@@ -72,8 +78,13 @@ export async function sendVerificationEmail(to: string, verifyUrl: string): Prom
   });
 }
 
+<<<<<<< HEAD
 export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<boolean> {
   const subject = 'Reset your MemLyra password';
+=======
+export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
+  const subject = `Reset your ${APP_NAME} password`;
+>>>>>>> 83331a6e4e67dedbe41b4a2e32f131f7c2d2ad16
   const text = `Click this link to reset your password: ${resetUrl}\n\nThis link expires in one hour. If this was not you, ignore this email.`;
   const html = `
     <p>Click this link to reset your password:</p>

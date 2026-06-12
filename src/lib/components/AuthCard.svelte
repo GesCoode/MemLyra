@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { APP_NAME } from '$lib/app';
+
   let {
     title,
     description,
@@ -29,7 +31,7 @@
 
     <form class="glass-panel glass-panel-accent relative space-y-6 p-8 sm:p-10" {onsubmit}>
       <div class="space-y-2 text-center">
-        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-accent">MemLyra</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-accent">{APP_NAME}</p>
         <h1 class="font-display text-3xl font-semibold text-heading">{title}</h1>
         <p class="text-sm text-muted">{description}</p>
       </div>

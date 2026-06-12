@@ -1,28 +1,15 @@
 <script lang="ts">
-  import './layout.css';
+  import './cutepics.css';
   import favicon from '$lib/assets/favicon.svg';
+  import { APP_NAME } from '$lib/app';
   import Navbar from '$lib/sections/Navbar.svelte';
-  import Footer from '$lib/sections/Footer.svelte';
   import { setUser } from '$lib/stores/auth';
-  import { clearDecks, loadDecks } from '$lib/stores/decks';
-  import { clearFlashcards, loadFlashcards } from '$lib/stores/flashcards';
-  import { clearTags, loadTags } from '$lib/stores/tags';
   import { initTheme } from '$lib/stores/theme';
 
   let { children, data } = $props();
 
   $effect(() => {
     setUser(data.user);
-
-    if (data.user) {
-      void loadDecks();
-      void loadTags();
-      void loadFlashcards();
-    } else {
-      clearDecks();
-      clearTags();
-      clearFlashcards();
-    }
   });
 
   if (typeof window !== 'undefined') {
@@ -32,15 +19,23 @@
 
 <svelte:head>
   <link rel="icon" href={favicon} />
-  <title>MemLyra</title>
+  <title>{APP_NAME}</title>
 </svelte:head>
 
 <div class="page-backdrop flex min-h-screen flex-col">
-  <Navbar user={data.user} />
+  <div class="cute-decor" aria-hidden="true">
+    <div class="cute-decor__blob cute-decor__blob--1"></div>
+    <div class="cute-decor__blob cute-decor__blob--2"></div>
+    <div class="cute-decor__blob cute-decor__blob--3"></div>
+    <span class="cute-decor__emoji cute-decor__emoji--1">🌸</span>
+    <span class="cute-decor__emoji cute-decor__emoji--2">✨</span>
+    <span class="cute-decor__emoji cute-decor__emoji--3">🦆</span>
+    <span class="cute-decor__emoji cute-decor__emoji--4">💕</span>
+  </div>
+
+  <Navbar />
 
   <main class="flex-1">
     {@render children()}
   </main>
-
-  <Footer />
 </div>

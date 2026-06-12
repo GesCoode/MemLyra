@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { APP_NAME } from '$lib/app';
   import AuthCard from '$lib/components/AuthCard.svelte';
 
   let { data } = $props();
@@ -50,7 +51,7 @@
 
 <svelte:head>
   <title>
-    {data.status === 'ready' ? 'Reset password · MemLyra' : 'Invalid link · MemLyra'}
+    {data.status === 'ready' ? `Reset password · ${APP_NAME}` : `Invalid link · ${APP_NAME}`}
   </title>
 </svelte:head>
 

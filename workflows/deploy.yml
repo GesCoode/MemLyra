@@ -1,4 +1,4 @@
-name: Deploy MemLyra
+name: Deploy
 
 on:
   push:
@@ -17,10 +17,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
-        run: docker build -t memlyra .
+        run: docker build -t app .
 
       - name: Save Docker image
-        run: docker save memlyra > memlyra.tar
+        run: docker save app > app.tar
 
       - name: Copy image to server
         uses: appleboy/scp-action@v0.1.7
@@ -28,7 +28,7 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_KEY }}
-          source: "memlyra.tar"
+          source: "app.tar"
           target: "/root"
 
       - name: Deploy on server via SSH
@@ -38,6 +38,6 @@ jobs:
           username: root
           key: ${{ secrets.SSH_KEY }}
           script: |
-            docker rm -f memlyra || true
-            docker load < /root/memlyra.tar
-            docker run -d --restart unless-stopped --name memlyra -p 80:80 memlyra
+            docker rm -f app || true
+            docker load < /root/app.tar
+            docker run -d --restart unless-stopped --name app -p 3001:3000 app

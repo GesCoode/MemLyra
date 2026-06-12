@@ -5,7 +5,9 @@
   import AccountVerification from '$lib/components/AccountVerification.svelte';
   import AuthCard from '$lib/components/AuthCard.svelte';
 
-  const VERIFICATION_KEY = 'memlyra-verification';
+  import { APP_NAME, SESSION_STORAGE_KEYS } from '$lib/app';
+
+  const VERIFICATION_KEY = SESSION_STORAGE_KEYS.verification;
 
   type StoredVerification = {
     title: string;
@@ -112,7 +114,7 @@
 </script>
 
 <svelte:head>
-  <title>{verification ? 'Account removed · MemLyra' : 'Log in · MemLyra'}</title>
+  <title>{verification ? `Account removed · ${APP_NAME}` : `Log in · ${APP_NAME}`}</title>
 </svelte:head>
 
 {#if verification}
@@ -127,7 +129,7 @@
 {:else}
   <AuthCard
     title="Welcome back"
-    description="Sign in to continue learning."
+    description="Sign in to your account."
     submitLabel={submitting ? 'Signing in…' : 'Log in'}
     alternateText="Need an account? "
     alternateHref="/register"

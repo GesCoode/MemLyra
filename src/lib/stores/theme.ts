@@ -1,18 +1,20 @@
 import { browser } from '$app/environment';
 import { writable } from 'svelte/store';
 
-const STORAGE_KEY = 'memlyra-theme';
+import { SESSION_STORAGE_KEYS } from '$lib/app';
+
+const STORAGE_KEY = SESSION_STORAGE_KEYS.theme;
 
 export type ThemeMode = 'light' | 'dark';
 
-export const theme = writable<ThemeMode>('dark');
+export const theme = writable<ThemeMode>('light');
 
 function readStoredTheme(): ThemeMode {
-  if (!browser) return 'dark';
+  if (!browser) return 'light';
 
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === 'light' || stored === 'dark') return stored;
-  return 'dark';
+  return 'light';
 }
 
 function applyTheme(mode: ThemeMode) {

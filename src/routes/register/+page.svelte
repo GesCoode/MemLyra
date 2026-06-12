@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { APP_NAME } from '$lib/app';
   import AuthCard from '$lib/components/AuthCard.svelte';
 
   let name = $state('');
@@ -48,12 +49,12 @@
 </script>
 
 <svelte:head>
-  <title>Register · MemLyra</title>
+  <title>Register · {APP_NAME}</title>
 </svelte:head>
 
 <AuthCard
   title="Create account"
-  description="Start building your flashcard library."
+  description="Create an account to get started."
   submitLabel={submitting ? 'Creating account…' : 'Create account'}
   alternateText="Already have an account? "
   alternateHref="/login"

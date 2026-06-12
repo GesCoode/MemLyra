@@ -4,6 +4,7 @@
   import AccountVerification from '$lib/components/AccountVerification.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import { APP_NAME, SESSION_STORAGE_KEYS } from '$lib/app';
   import {
     changePassword,
     deleteCurrentAccount,
@@ -11,11 +12,7 @@
     updateProfile,
     user
   } from '$lib/stores/auth';
-  import { flashcards } from '$lib/stores/flashcards';
-  import { removeLibrary, removeProgressMetrics } from '$lib/utils/accountActions';
   import { theme } from '$lib/stores/theme';
-
-  type ConfirmAction = 'progress' | 'library' | 'account';
 
   type VerificationView = {
     title: string;
@@ -33,7 +30,7 @@
   let confirmPassword = $state('');
   let passwordMessage = $state('');
   let passwordError = $state('');
-  let confirmAction = $state<ConfirmAction | null>(null);
+  let confirmDelete = $state(false);
   let verification = $state<VerificationView | null>(null);
 
   $effect(() => {
@@ -95,95 +92,31 @@
     })();
   }
 
-  function openConfirm(action: ConfirmAction) {
-    confirmAction = action;
+  function handleDeleteAccount() {
+    void (async () => {
+      const removed = await deleteCurrentAccount();
+      if (!removed) return;
+
+      if (browser) {
+        sessionStorage.setItem(
+          SESSION_STORAGE_KEYS.verification,
+          JSON.stringify({
+            title: 'Account removed',
+            message: 'Your account has been permanently deleted.',
+            actionLabel: 'Continue to log in'
+          })
+        );
+      }
+
+      goto('/login');
+    })();
+
+    confirmDelete = false;
   }
-
-  function closeConfirm() {
-    confirmAction = null;
-  }
-
-  function handleConfirm() {
-    if (!confirmAction) return;
-
-    if (confirmAction === 'progress') {
-      void (async () => {
-        await removeProgressMetrics();
-        verification = {
-          title: 'Progress metrics removed',
-          message:
-            'All exercise stats, stars, and learned dates have been cleared from your flashcards. Your library content is unchanged.',
-          actionLabel: 'Back to account',
-          useAction: () => (verification = null)
-        };
-      })();
-    } else if (confirmAction === 'library') {
-      void (async () => {
-        await removeLibrary();
-        verification = {
-          title: 'Library removed',
-          message:
-            'All flashcards, decks, and tags have been deleted from this account. Your account is still active.',
-          actionLabel: 'Back to account',
-          useAction: () => (verification = null)
-        };
-      })();
-    } else if (confirmAction === 'account') {
-      void (async () => {
-        await removeLibrary();
-        const removed = await deleteCurrentAccount();
-        if (!removed) return;
-
-        if (browser) {
-          sessionStorage.setItem(
-            'memlyra-verification',
-            JSON.stringify({
-              title: 'Account removed',
-              message:
-                'Your account and all saved learning data on this account have been permanently deleted.',
-              actionLabel: 'Continue to log in'
-            })
-          );
-        }
-
-        goto('/login');
-      })();
-
-      confirmAction = null;
-      return;
-    }
-
-    confirmAction = null;
-  }
-
-  let confirmCopy = $derived(
-    confirmAction === 'progress'
-      ? {
-          title: 'Remove progress metrics?',
-          message:
-            'This clears stars, learned dates, and exercise stats on every flashcard. Your flashcards, decks, and tags stay in your library.',
-          confirmLabel: 'Remove progress'
-        }
-      : confirmAction === 'library'
-        ? {
-            title: 'Remove library?',
-            message:
-              'This permanently deletes all flashcards, decks, and tags on this account. Progress metrics go with them. This cannot be undone.',
-            confirmLabel: 'Remove library'
-          }
-        : confirmAction === 'account'
-          ? {
-              title: 'Remove account?',
-              message:
-                'This permanently deletes your account, library, and all progress on this account. You will need to register again to use MemLyra.',
-              confirmLabel: 'Remove account'
-            }
-          : null
-  );
 </script>
 
 <svelte:head>
-  <title>Account · MemLyra</title>
+  <title>Account · {APP_NAME}</title>
 </svelte:head>
 
 <section class="page-content account-page">
@@ -198,7 +131,7 @@
   {:else}
     <div class="library-header mt-0">
       <h1 class="library-header__title">Account</h1>
-      <p class="library-header__desc">Manage your profile and learning data for this account.</p>
+      <p class="library-header__desc">Manage your profile and account settings.</p>
     </div>
 
     <div class="account-page__sections">
@@ -281,7 +214,7 @@
 
       <section class="account-panel glass-panel">
         <h2 class="account-panel__title">Appearance</h2>
-        <p class="account-panel__desc">Choose how MemLyra looks for your account.</p>
+        <p class="account-panel__desc">Choose how {APP_NAME} looks for your account.</p>
 
         <div class="account-appearance-row">
           <div>
@@ -295,48 +228,21 @@
       </section>
 
       <section class="account-panel glass-panel account-panel-danger">
-        <h2 class="account-panel__title">Data &amp; privacy</h2>
+        <h2 class="account-panel__title">Danger zone</h2>
         <p class="account-panel__desc">
-          These actions apply to data stored on this account. Each step asks for confirmation first.
+          Permanently delete your account and all associated data. This cannot be undone.
         </p>
 
         <div class="account-danger-list">
           <article class="account-danger-item">
             <div>
-              <h3 class="account-danger-item__title">Remove progress metrics</h3>
+              <h3 class="account-danger-item__title">Delete account</h3>
               <p class="account-danger-item__desc">
-                Clears stars, streaks, and exercise stats while keeping your flashcards.
-              </p>
-              <p class="account-danger-item__meta">
-                {$flashcards.length} flashcard{$flashcards.length === 1 ? '' : 's'} in library
+                Removes your account, sessions, and profile from the database.
               </p>
             </div>
-            <button class="btn-danger shrink-0" type="button" onclick={() => openConfirm('progress')}>
-              Remove progress
-            </button>
-          </article>
-
-          <article class="account-danger-item">
-            <div>
-              <h3 class="account-danger-item__title">Remove library</h3>
-              <p class="account-danger-item__desc">
-                Deletes all flashcards, decks, tags, and their progress from this account.
-              </p>
-            </div>
-            <button class="btn-danger shrink-0" type="button" onclick={() => openConfirm('library')}>
-              Remove library
-            </button>
-          </article>
-
-          <article class="account-danger-item">
-            <div>
-              <h3 class="account-danger-item__title">Remove account</h3>
-              <p class="account-danger-item__desc">
-                Permanently deletes your account and all associated data on this account.
-              </p>
-            </div>
-            <button class="btn-danger shrink-0" type="button" onclick={() => openConfirm('account')}>
-              Remove account
+            <button class="btn-danger shrink-0" type="button" onclick={() => (confirmDelete = true)}>
+              Delete account
             </button>
           </article>
         </div>
@@ -345,14 +251,12 @@
   {/if}
 </section>
 
-{#if confirmCopy}
-  <ConfirmDialog
-    open={confirmAction !== null}
-    title={confirmCopy.title}
-    message={confirmCopy.message}
-    confirmLabel={confirmCopy.confirmLabel}
-    cancelLabel="Cancel"
-    onConfirm={handleConfirm}
-    onCancel={closeConfirm}
-  />
-{/if}
+<ConfirmDialog
+  open={confirmDelete}
+  title="Delete account?"
+  message={`This permanently deletes your account and all associated data. You will need to register again to use ${APP_NAME}.`}
+  confirmLabel="Delete account"
+  cancelLabel="Cancel"
+  onConfirm={handleDeleteAccount}
+  onCancel={() => (confirmDelete = false)}
+/>

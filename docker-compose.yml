@@ -1,24 +1,24 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: memlyra-db
+    container_name: app-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: memlyra
+      POSTGRES_USER: app
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: memlyra
+      POSTGRES_DB: app
     volumes:
-      - memlyra_pg:/var/lib/postgresql/data
+      - app_pg:/var/lib/postgresql/data
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
 
   app:
     build: .
-    container_name: memlyra
+    container_name: app
     restart: unless-stopped
     ports:
       - '3001:3000'
     environment:
-      DATABASE_URL: postgres://memlyra:${POSTGRES_PASSWORD}@db:5432/memlyra
+      DATABASE_URL: postgres://app:${POSTGRES_PASSWORD}@db:5432/app
       SESSION_SECRET: ${SESSION_SECRET}
       ORIGIN: ${ORIGIN}
       SMTP_HOST: ${SMTP_HOST}
@@ -32,4 +32,4 @@ services:
       - db
 
 volumes:
-  memlyra_pg:
+  app_pg:

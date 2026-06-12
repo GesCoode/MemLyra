@@ -1,24 +1,13 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
     <script>
       try {
-        var storedTheme = localStorage.getItem('memlyra-theme');
+        var storedTheme = localStorage.getItem('app-theme');
         if (storedTheme === 'light' || storedTheme === 'dark') {
           document.documentElement.dataset.theme = storedTheme;
         }
       } catch (e) {}
-    </script>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-T4VHSGRE4D"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag('js', new Date());
-
-      gtag('config', 'G-T4VHSGRE4D');
     </script>
 
     <meta charset="utf-8" />

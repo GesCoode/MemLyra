@@ -4,10 +4,10 @@
 
 @theme {
   --color-heading: #eef1f8;
-  --color-accent: #8fb4e8;
-  --color-accent-soft: #a8c4f0;
-  --color-action: #e8c468;
-  --color-action-hover: #f0d080;
+  --color-accent: #f0a8b8;
+  --color-accent-soft: #f5b8c6;
+  --color-action: #f8b4c4;
+  --color-action-hover: #ffc4d4;
   --color-action-text: #1a1408;
   --color-accent-red: #e88a7a;
   --color-paragraph: #c8d0de;
@@ -21,9 +21,9 @@
   --font-sans: 'Spline Sans', sans-serif;
   --font-display: 'Plus Jakarta Sans', sans-serif;
 
-  --shadow-glow: 0 0 80px rgba(143, 180, 232, 0.12);
+  --shadow-glow: 0 0 80px rgba(240, 168, 184, 0.14);
   --shadow-card: 0 24px 60px rgba(0, 0, 0, 0.35);
-  --shadow-button: 0 10px 28px rgba(232, 196, 104, 0.28);
+  --shadow-button: 0 10px 28px rgba(248, 180, 196, 0.32);
 }
 
 @layer base {
@@ -73,10 +73,10 @@
   html[data-theme='light'] {
     color-scheme: light;
     --color-heading: #1a2438;
-    --color-accent: #3d72b5;
-    --color-accent-soft: #3569ab;
-    --color-action: #c9922a;
-    --color-action-hover: #dbaa3f;
+    --color-accent: #d46a8a;
+    --color-accent-soft: #c45a7a;
+    --color-action: #e87898;
+    --color-action-hover: #f088a8;
     --color-action-text: #1a1408;
     --color-accent-red: #c95544;
     --color-paragraph: #3e4c63;
@@ -2768,5 +2768,166 @@
 
   html[data-theme='light'] .library-panel-accent {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(243, 247, 252, 0.88));
+  }
+
+  .signup-page {
+    @apply flex min-h-[calc(100vh-8rem)] items-center justify-center py-10 sm:py-14;
+  }
+
+  .signup-flow {
+    @apply w-full max-w-3xl;
+  }
+
+  .signup-progress {
+    @apply mb-6 flex items-center justify-center gap-2;
+  }
+
+  .signup-progress__dot {
+    @apply h-2 w-2 rounded-full transition;
+    background: var(--progress-track);
+  }
+
+  .signup-progress__dot-active {
+    background: var(--color-accent);
+  }
+
+  .signup-progress__dot-current {
+    @apply w-8;
+  }
+
+  .signup-panel {
+    @apply p-6 sm:p-10;
+  }
+
+  .signup-panel--narrow {
+    @apply mx-auto max-w-lg;
+  }
+
+  .signup-panel--done {
+    @apply text-center;
+  }
+
+  .signup-panel__header {
+    @apply mb-6;
+  }
+
+  .signup-panel__action {
+    @apply mt-8 w-full sm:w-auto;
+  }
+
+  .signup-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.16em] text-accent;
+  }
+
+  .signup-title {
+    @apply mt-2 text-3xl font-semibold text-heading sm:text-4xl;
+  }
+
+  .signup-lead {
+    @apply mt-3 text-base leading-relaxed text-muted;
+  }
+
+  .signup-benefits {
+    @apply mt-6 space-y-3 text-sm leading-relaxed text-paragraph;
+  }
+
+  .signup-benefits li {
+    @apply relative pl-6;
+  }
+
+  .signup-benefits li::before {
+    content: '♥';
+    @apply absolute left-0 text-accent-red;
+  }
+
+  .category-grid {
+    @apply grid gap-3 sm:grid-cols-2;
+  }
+
+  .category-card {
+    @apply relative rounded-2xl border border-border p-4 text-left transition;
+    background: var(--surface-overlay-faint);
+  }
+
+  .category-card:hover {
+    border-color: var(--color-border-strong);
+    background: var(--surface-overlay);
+    transform: translateY(-1px);
+  }
+
+  .category-card-selected {
+    border-color: var(--color-border-strong);
+    background: linear-gradient(135deg, var(--home-feature-fill-start), var(--home-feature-fill-end));
+    box-shadow: var(--shadow-glow);
+  }
+
+  .category-card__emoji {
+    @apply text-3xl;
+  }
+
+  .category-card__label {
+    @apply mt-2 block font-semibold text-heading;
+  }
+
+  .category-card__desc {
+    @apply mt-1 block text-sm leading-relaxed text-muted;
+  }
+
+  .category-card__check {
+    @apply absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold;
+    background: var(--color-action);
+    color: var(--color-action-text);
+  }
+
+  .signup-actions {
+    @apply mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between;
+  }
+
+  .signup-actions .btn-primary,
+  .signup-actions .btn-secondary {
+    @apply w-full sm:w-auto;
+  }
+
+  .signup-summary {
+    @apply mt-6 rounded-2xl border border-border p-4;
+    background: var(--surface-overlay-faint);
+  }
+
+  .signup-summary__label {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-muted;
+  }
+
+  .signup-summary__chips {
+    @apply mt-3 flex flex-wrap gap-2;
+  }
+
+  .signup-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-heading;
+    background: var(--surface-overlay);
+    border: 1px solid var(--color-border);
+  }
+
+  .signup-email-form {
+    @apply mt-6 space-y-4;
+  }
+
+  .signup-field {
+    @apply block space-y-2;
+  }
+
+  .signup-message {
+    @apply text-sm;
+  }
+
+  .signup-message-error {
+    @apply text-accent-red;
+  }
+
+  .signup-done__icon {
+    @apply text-5xl;
+  }
+
+  .signup-done__icon + .signup-title {
+    @apply mt-4;
   }
 }
