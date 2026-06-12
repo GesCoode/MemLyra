@@ -6,6 +6,7 @@
   let password = $state('');
   let error = $state('');
   let success = $state('');
+  let emailSent = $state(true);
   let submitting = $state(false);
 
   async function handleSubmit(event: SubmitEvent) {
@@ -21,13 +22,19 @@
         body: JSON.stringify({ email, name, password })
       });
 
-      const data = (await response.json()) as { error?: string; message?: string; email?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+        email?: string;
+        emailSent?: boolean;
+      };
 
       if (!response.ok) {
         error = data.error ?? 'Could not create account.';
         return;
       }
 
+      emailSent = data.emailSent !== false;
       success = data.message ?? 'Check your email to activate your account.';
       email = '';
       name = '';
@@ -55,6 +62,16 @@
 >
   {#if success}
     <p class="library-message library-message-success">{success}</p>
+    {#if emailSent}
+      <p class="text-sm leading-relaxed text-muted">
+        Open the activation link in your email before signing in. Check spam if it does not arrive
+        within a few minutes.
+      </p>
+    {:else}
+      <p class="text-sm leading-relaxed text-muted">
+        Go to the log in page and use “Resend activation email”, or contact support if you need help.
+      </p>
+    {/if}
   {/if}
 
   {#if error}

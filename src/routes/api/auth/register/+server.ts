@@ -34,10 +34,19 @@ export const POST: RequestHandler = async ({ request, url }) => {
   await createBaseDeckForUser(user.id);
 
   const verifyUrl = `${getAppOrigin(url)}/verify?token=${verificationToken}`;
-  await sendVerificationEmail(user.email, verifyUrl);
+
+  let emailSent = false;
+  try {
+    emailSent = await sendVerificationEmail(user.email, verifyUrl);
+  } catch (error) {
+    console.error('Failed to send verification email', error);
+  }
 
   return json({
-    message: 'Check your email to activate your account.',
-    email: user.email
+    message: emailSent
+      ? 'Check your email to activate your account.'
+      : 'Account created, but the activation email could not be sent. Use “Resend activation email” on the log in page.',
+    email: user.email,
+    emailSent
   });
 };

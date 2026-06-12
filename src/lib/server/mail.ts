@@ -30,23 +30,30 @@ async function sendEmail(options: {
   html: string;
   logLabel: string;
   logUrl?: string;
-}): Promise<void> {
+}): Promise<boolean> {
   if (!smtpConfigured()) {
     console.warn(`SMTP is not configured. ${options.logLabel}:`, options.logUrl ?? options.text);
-    return;
+    return false;
   }
 
   const transport = createTransport();
-  await transport.sendMail({
-    from: env.SMTP_FROM,
-    to: options.to,
-    subject: options.subject,
-    text: options.text,
-    html: options.html
-  });
+
+  try {
+    await transport.sendMail({
+      from: env.SMTP_FROM,
+      to: options.to,
+      subject: options.subject,
+      text: options.text,
+      html: options.html
+    });
+    return true;
+  } catch (error) {
+    console.error(`Failed to send email (${options.logLabel})`, error);
+    throw error;
+  }
 }
 
-export async function sendVerificationEmail(to: string, verifyUrl: string): Promise<void> {
+export async function sendVerificationEmail(to: string, verifyUrl: string): Promise<boolean> {
   const subject = 'Activate your MemLyra account';
   const text = `Click this link to activate your account: ${verifyUrl}\n\nIf this was not you, then ignore this mail.`;
   const html = `
@@ -55,7 +62,7 @@ export async function sendVerificationEmail(to: string, verifyUrl: string): Prom
     <p>If this was not you, then ignore this mail.</p>
   `;
 
-  await sendEmail({
+  return sendEmail({
     to,
     subject,
     text,
@@ -65,7 +72,7 @@ export async function sendVerificationEmail(to: string, verifyUrl: string): Prom
   });
 }
 
-export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
+export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<boolean> {
   const subject = 'Reset your MemLyra password';
   const text = `Click this link to reset your password: ${resetUrl}\n\nThis link expires in one hour. If this was not you, ignore this email.`;
   const html = `
@@ -74,7 +81,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
     <p>This link expires in one hour. If this was not you, ignore this email.</p>
   `;
 
-  await sendEmail({
+  return sendEmail({
     to,
     subject,
     text,

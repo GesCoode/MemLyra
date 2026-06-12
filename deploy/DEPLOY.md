@@ -63,3 +63,16 @@ sudo certbot --nginx -d memlyra.com -d www.memlyra.com
 docker exec -it memlyra-db psql -U memlyra -d memlyra \
   -c "DELETE FROM users WHERE email = 'you@example.com';"
 ```
+
+## Auth email troubleshooting
+
+Registration requires email verification before login. If users see errors or never receive mail:
+
+1. Confirm all `SMTP_*` values are set in `.env` on the server.
+2. Rebuild after changing env: `docker compose up -d --build`
+3. Check app logs for SMTP errors or logged verification links:
+   `docker logs memlyra --tail 100`
+4. Manually verify an account:
+   `docker exec -it memlyra-db psql -U memlyra -d memlyra -c "UPDATE users SET email_verified = TRUE WHERE email = 'you@example.com';"`
+5. List accounts:
+   `docker exec -it memlyra-db psql -U memlyra -d memlyra -c "SELECT email, name, email_verified, created_at FROM users ORDER BY created_at;"`

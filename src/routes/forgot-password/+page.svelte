@@ -42,7 +42,7 @@
 
 <AuthCard
   title="Forgot password"
-  description="Enter your email and we will send you a reset link."
+  description="Enter your email. Verified accounts get a password reset link; unverified accounts get a new activation link."
   submitLabel={submitting ? 'Sending…' : 'Send reset link'}
   alternateText="Remembered it? "
   alternateHref="/login"

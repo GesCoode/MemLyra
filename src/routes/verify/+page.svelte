@@ -17,10 +17,13 @@
     {:else}
       <h1 class="font-display text-3xl font-semibold text-heading">Invalid or expired link</h1>
       <p class="text-sm leading-relaxed text-muted">
-        This activation link is invalid or has expired. Register again or contact support if you
-        need help.
+        This activation link is invalid or has expired. Register again, use forgot password to request
+        a new activation link, or contact support if you need help.
       </p>
-      <a class="btn-secondary inline-flex" href="/register">Register</a>
+      <div class="flex flex-wrap justify-center gap-3">
+        <a class="btn-secondary inline-flex" href="/register">Register</a>
+        <a class="btn-primary inline-flex" href="/forgot-password">Request new link</a>
+      </div>
     {/if}
   </div>
 </section>

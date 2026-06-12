@@ -16,8 +16,13 @@
   let email = $state('');
   let password = $state('');
   let error = $state('');
+  let resendMessage = $state('');
+  let resendError = $state('');
+  let resending = $state(false);
   let submitting = $state(false);
   let verification = $state<StoredVerification | null>(null);
+
+  let needsVerification = $derived(error.toLowerCase().includes('verify'));
 
   let notice = $derived(
     $page.url.searchParams.get('verified') === '1'
@@ -42,6 +47,8 @@
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     error = '';
+    resendMessage = '';
+    resendError = '';
     submitting = true;
 
     try {
@@ -69,6 +76,38 @@
 
   function dismissVerification() {
     verification = null;
+  }
+
+  async function resendVerificationEmail() {
+    if (!email.trim()) {
+      resendError = 'Enter your email address above first.';
+      return;
+    }
+
+    resendMessage = '';
+    resendError = '';
+    resending = true;
+
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      const data = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        resendError = data.error ?? 'Could not resend activation email.';
+        return;
+      }
+
+      resendMessage = data.message ?? 'If your account still needs activation, a new link has been sent.';
+    } catch {
+      resendError = 'Could not resend activation email.';
+    } finally {
+      resending = false;
+    }
   }
 </script>
 
@@ -101,6 +140,28 @@
 
     {#if error}
       <p class="library-message library-message-error">{error}</p>
+    {/if}
+
+    {#if needsVerification}
+      <div class="space-y-2 rounded-xl border border-border bg-surface/40 p-4 text-sm">
+        <p class="text-muted">
+          Need a new activation link? We can send another email to the address above.
+        </p>
+        <button
+          class="btn-secondary w-full"
+          type="button"
+          disabled={resending || submitting}
+          onclick={resendVerificationEmail}
+        >
+          {resending ? 'Sending…' : 'Resend activation email'}
+        </button>
+        {#if resendError}
+          <p class="library-message library-message-error">{resendError}</p>
+        {/if}
+        {#if resendMessage}
+          <p class="library-message library-message-success">{resendMessage}</p>
+        {/if}
+      </div>
     {/if}
 
     <label class="block space-y-2">
