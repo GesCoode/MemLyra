@@ -1,5 +1,18 @@
 import { derived, writable } from 'svelte/store';
 import { tags } from '$lib/stores/tags';
+import { guestActive, runGuestMutation } from '$lib/utils/guestStoreBridge';
+import { loadGuestIntoStores } from '$lib/utils/guestSync';
+import {
+  guestCreateFlashcard,
+  guestDeleteFlashcards,
+  guestDeleteFlashcardsInDeck,
+  guestImportRows,
+  guestRecordExerciseResult,
+  guestRecordExerciseSeen,
+  guestUpdateFlashcardDeck,
+  guestUpdateFlashcardTags,
+  readGuestData
+} from '$lib/utils/guestStorage';
 import type { CardDirection } from '$lib/utils/starProgress';
 
 export type Flashcard = {
@@ -46,6 +59,11 @@ function replaceCard(items: Flashcard[], card: Flashcard): Flashcard[] {
 }
 
 export async function loadFlashcards(): Promise<void> {
+  if (guestActive()) {
+    loadGuestIntoStores();
+    return;
+  }
+
   const response = await fetch('/api/flashcards');
   if (!response.ok) {
     flashcards.set([]);
@@ -66,6 +84,12 @@ export async function createFlashcard(
   tagIds: string[] = [],
   deckId: string | null = null
 ): Promise<Flashcard | null> {
+  if (guestActive()) {
+    const result = guestCreateFlashcard(readGuestData(), sideA, sideB, tagIds, deckId);
+    runGuestMutation(() => result.data);
+    return result.card;
+  }
+
   const response = await fetch('/api/flashcards', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -80,6 +104,11 @@ export async function createFlashcard(
 }
 
 export async function updateFlashcardDeck(flashcardId: string, deckId: string | null): Promise<boolean> {
+  if (guestActive()) {
+    runGuestMutation((data) => guestUpdateFlashcardDeck(data, flashcardId, deckId));
+    return true;
+  }
+
   const response = await fetch('/api/flashcards', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -94,6 +123,11 @@ export async function updateFlashcardDeck(flashcardId: string, deckId: string | 
 }
 
 export async function updateFlashcardTags(flashcardId: string, tagIds: string[]): Promise<boolean> {
+  if (guestActive()) {
+    runGuestMutation((data) => guestUpdateFlashcardTags(data, flashcardId, tagIds));
+    return true;
+  }
+
   const response = await fetch('/api/flashcards?action=tags', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -110,6 +144,11 @@ export async function updateFlashcardTags(flashcardId: string, tagIds: string[])
 export async function deleteFlashcards(flashcardIds: string[]): Promise<boolean> {
   if (flashcardIds.length === 0) return true;
 
+  if (guestActive()) {
+    runGuestMutation((data) => guestDeleteFlashcards(data, flashcardIds));
+    return true;
+  }
+
   const response = await fetch(`/api/flashcards?ids=${encodeURIComponent(flashcardIds.join(','))}`, {
     method: 'DELETE'
   });
@@ -122,6 +161,11 @@ export async function deleteFlashcards(flashcardIds: string[]): Promise<boolean>
 }
 
 export async function deleteFlashcardsInDeck(deckId: string): Promise<boolean> {
+  if (guestActive()) {
+    runGuestMutation((data) => guestDeleteFlashcardsInDeck(data, deckId));
+    return true;
+  }
+
   const response = await fetch(`/api/flashcards?deckId=${encodeURIComponent(deckId)}`, {
     method: 'DELETE'
   });
@@ -141,6 +185,12 @@ export async function importFlashcardRows(
   rows: { front: string; back: string; tagLabels?: string[] }[],
   deckId: string | null = null
 ): Promise<ImportResult> {
+  if (guestActive()) {
+    const result = guestImportRows(readGuestData(), rows, deckId);
+    runGuestMutation(() => result.data);
+    return result.result;
+  }
+
   const response = await fetch('/api/flashcards?action=import', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -166,6 +216,12 @@ export async function recordExerciseResult(
   correct: boolean,
   direction: CardDirection
 ): Promise<void> {
+  if (guestActive()) {
+    const result = guestRecordExerciseResult(readGuestData(), cardId, correct, direction);
+    runGuestMutation(() => result.data);
+    return;
+  }
+
   const response = await fetch('/api/flashcards?action=progress', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -179,6 +235,12 @@ export async function recordExerciseResult(
 }
 
 export async function recordExerciseSeen(cardId: string): Promise<void> {
+  if (guestActive()) {
+    const result = guestRecordExerciseSeen(readGuestData(), cardId);
+    runGuestMutation(() => result.data);
+    return;
+  }
+
   const response = await fetch('/api/flashcards?action=progress', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -192,6 +254,8 @@ export async function recordExerciseSeen(cardId: string): Promise<void> {
 }
 
 export async function clearProgressMetrics(): Promise<void> {
+  if (guestActive()) return;
+
   const response = await fetch('/api/flashcards?action=clear-progress', { method: 'POST' });
   if (!response.ok) return;
 
@@ -200,6 +264,11 @@ export async function clearProgressMetrics(): Promise<void> {
 }
 
 export async function clearAllFlashcards(): Promise<void> {
+  if (guestActive()) {
+    runGuestMutation((data) => ({ ...data, flashcards: [] }));
+    return;
+  }
+
   const response = await fetch('/api/flashcards?action=clear-all', { method: 'POST' });
   if (!response.ok) return;
 

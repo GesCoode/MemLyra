@@ -7,6 +7,7 @@
   import PasswordInput from '$lib/components/PasswordInput.svelte';
 
   import { APP_NAME, SESSION_STORAGE_KEYS } from '$lib/app';
+  import { migrateGuestDataIfPresent } from '$lib/utils/guestMigrateClient';
 
   const VERIFICATION_KEY = SESSION_STORAGE_KEYS.verification;
 
@@ -68,6 +69,7 @@
         return;
       }
 
+      await migrateGuestDataIfPresent();
       await invalidateAll();
       goto('/dashboard', { replaceState: true });
     } catch {

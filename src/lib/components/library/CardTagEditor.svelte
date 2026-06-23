@@ -2,6 +2,8 @@
   import { browser } from '$app/environment';
   import { updateFlashcardTags } from '$lib/stores/flashcards';
   import type { Tag } from '$lib/stores/tags';
+  import { getFixedMenuPosition } from '$lib/utils/anchoredMenu';
+  import { portal } from '$lib/utils/portal';
   import { tagChipStyles } from '$lib/utils/tagColors';
 
   let {
@@ -16,7 +18,7 @@
 
   let menuOpen = $state(false);
   let menuPosition = $state({ top: 0, left: 0 });
-  let addButtonEl = $state<HTMLButtonElement | null>(null);
+  let anchorEl = $state<HTMLSpanElement | null>(null);
   let menuEl = $state<HTMLDivElement | null>(null);
 
   let assignedTags = $derived(
@@ -27,34 +29,16 @@
 
   let availableTags = $derived(tags.filter((tag) => !tagIds.includes(tag.id)));
 
-  function updateMenuPosition() {
-    if (!browser || !addButtonEl) return;
-
-    const triggerRect = addButtonEl.getBoundingClientRect();
-    const menuHeight = menuEl?.offsetHeight ?? 140;
-    const menuWidth = menuEl?.offsetWidth ?? 160;
-    const gap = 6;
-    const spaceBelow = window.innerHeight - triggerRect.bottom;
-    const opensUp = spaceBelow < menuHeight + gap;
-
-    let left = triggerRect.left;
-    if (left + menuWidth > window.innerWidth - 8) {
-      left = window.innerWidth - menuWidth - 8;
-    }
-
-    menuPosition = {
-      left,
-      top: opensUp
-        ? Math.max(8, triggerRect.top - menuHeight - gap)
-        : triggerRect.bottom + gap
-    };
+  function updateMenuPlacement() {
+    if (!browser || !anchorEl) return;
+    menuPosition = getFixedMenuPosition(anchorEl, menuEl);
   }
 
   function openMenu() {
     menuOpen = true;
     queueMicrotask(() => {
-      updateMenuPosition();
-      queueMicrotask(updateMenuPosition);
+      updateMenuPlacement();
+      queueMicrotask(updateMenuPlacement);
     });
   }
 
@@ -90,15 +74,18 @@
     class="card-tag-editor__backdrop"
     type="button"
     aria-label="Close tag menu"
+    use:portal
     onclick={closeMenu}
   ></button>
 
   <div
-    class="card-tag-editor__menu"
+    class="card-tag-editor__menu card-tag-editor__menu--floating"
+    style:top="{menuPosition.top}px"
+    style:left="{menuPosition.left}px"
     bind:this={menuEl}
+    use:portal
     role="menu"
     aria-label="Add tag"
-    style="top: {menuPosition.top}px; left: {menuPosition.left}px;"
   >
     {#if availableTags.length === 0}
       <p class="card-tag-editor__menu-empty">All tags assigned</p>
@@ -140,19 +127,20 @@
     {#if tags.length === 0}
       <span class="card-tag-editor__hint">Create tags below</span>
     {:else}
-      <button
-        class="tag-chip__action tag-chip__add"
-        type="button"
-        bind:this={addButtonEl}
-        aria-expanded={menuOpen}
-        aria-haspopup="menu"
-        aria-label="Add tag"
-        title="Add tag"
-        disabled={availableTags.length === 0 && !menuOpen}
-        onclick={toggleMenu}
-      >
-        +
-      </button>
+      <span class="card-tag-editor__anchor" bind:this={anchorEl}>
+        <button
+          class="tag-chip__action tag-chip__add"
+          type="button"
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          aria-label="Add tag"
+          title="Add tag"
+          disabled={availableTags.length === 0 && !menuOpen}
+          onclick={toggleMenu}
+        >
+          +
+        </button>
+      </span>
     {/if}
   </div>
 </div>

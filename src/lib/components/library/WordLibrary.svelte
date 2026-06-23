@@ -4,6 +4,7 @@
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import CardDeckEditor from '$lib/components/library/CardDeckEditor.svelte';
   import CardTagEditor from '$lib/components/library/CardTagEditor.svelte';
+  import PublishDeckDialog from '$lib/components/marketplace/PublishDeckDialog.svelte';
   import StarIcon from '$lib/components/icons/StarIcon.svelte';
   import {
     createFlashcard,
@@ -21,6 +22,12 @@
   import { sortFlashcards, type SortDirection, type SortField } from '$lib/utils/sortFlashcards';
   import { deckIndexStyle, tagChipStyles, tagDotStyle } from '$lib/utils/tagColors';
 
+  let { hideProgress = false, hideDecks = false, marketplaceHref = '/dashboard/marketplace' }: {
+    hideProgress?: boolean;
+    hideDecks?: boolean;
+    marketplaceHref?: string;
+  } = $props();
+
   type PanelMode = 'none' | 'delete';
 
   type ConfirmAction =
@@ -35,7 +42,7 @@
   let sortField = $state<SortField>('addedDate');
   let sortDirection = $state<SortDirection>('desc');
   let selectedIds = $state<string[]>([]);
-  let wordListOpen = $state(true);
+  let wordListOpen = $state(false);
   let decksOpen = $state(false);
   let tagsOpen = $state(false);
   let importOpen = $state(false);
@@ -73,6 +80,11 @@
   let importFileName = $state('');
   let importFileError = $state('');
   let importResult = $state<ImportResult | null>(null);
+  let importFormatHelpOpen = $state(false);
+  let deckPublishMessage = $state<{ deckId: string; text: string; error: boolean } | null>(null);
+  let publishDialogOpen = $state(false);
+  let publishDeckId = $state<string | null>(null);
+  let publishDeckTitle = $state('');
 
   let highlightedId = $state<string | null>(null);
   let flyingCard = $state<{
@@ -160,16 +172,50 @@
     queueMicrotask(measureCardsHostHeight);
   });
 
-  const sortOptions: { value: SortField; label: string }[] = [
-    { value: 'deck', label: 'Deck' },
-    { value: 'tag', label: 'Tags' },
-    { value: 'alphabetical', label: 'Alphabetically' },
-    { value: 'star', label: 'Star' },
-    { value: 'specialStar', label: 'Mastered' },
-    { value: 'bothWaysStar', label: 'Both ways star' },
-    { value: 'addedDate', label: 'Added date' },
-    { value: 'learnedDate', label: 'Learned date' }
-  ];
+  const sortOptions: { value: SortField; label: string }[] = $derived(
+    [
+      ...(!hideDecks ? [{ value: 'deck' as SortField, label: 'Deck' }] : []),
+      { value: 'tag', label: 'Tags' },
+      { value: 'alphabetical', label: 'Alphabetically' },
+      ...(!hideProgress
+        ? [
+            { value: 'star' as SortField, label: 'Star' },
+            { value: 'specialStar' as SortField, label: 'Mastered' },
+            { value: 'bothWaysStar' as SortField, label: 'Both ways star' },
+            { value: 'learnedDate' as SortField, label: 'Learned date' }
+          ]
+        : []),
+      { value: 'addedDate', label: 'Added date' }
+    ]
+  );
+
+  const tableColspan = $derived(
+    (panelMode === 'delete' ? 1 : 0) +
+      5 +
+      (hideDecks ? 0 : 1) +
+      (hideProgress ? 0 : 4)
+  );
+
+  $effect(() => {
+    if (
+      hideProgress &&
+      (sortField === 'star' ||
+        sortField === 'specialStar' ||
+        sortField === 'bothWaysStar' ||
+        sortField === 'learnedDate')
+    ) {
+      sortField = 'addedDate';
+    }
+    if (hideDecks && sortField === 'deck') {
+      sortField = 'addedDate';
+    }
+    if (hideDecks && $decks.length > 0 && addDeckId === null) {
+      addDeckId = $decks[0]?.id ?? null;
+    }
+    if (hideDecks && $decks.length > 0 && importDeckId === null) {
+      importDeckId = $decks[0]?.id ?? null;
+    }
+  });
 
   function deckCardCount(deckId: string): number {
     return $flashcards.filter((card) => card.deckId === deckId).length;
@@ -299,6 +345,24 @@
     deckLabel = '';
     if (!addDeckId) addDeckId = deck.id;
     if (!importDeckId) importDeckId = deck.id;
+  }
+
+  function openPublishDialog(deckId: string, deckLabel: string) {
+    publishDeckId = deckId;
+    publishDeckTitle = deckLabel;
+    publishDialogOpen = true;
+  }
+
+  function closePublishDialog() {
+    publishDialogOpen = false;
+    publishDeckId = null;
+    publishDeckTitle = '';
+  }
+
+  function handlePublished(message: string) {
+    if (!publishDeckId) return;
+    deckPublishMessage = { deckId: publishDeckId, text: message, error: false };
+    closePublishDialog();
   }
 
   async function handleRemoveDeck(deckId: string) {
@@ -543,7 +607,7 @@
 <section class="library-panel library-panel-accent">
   <CollapsibleSection
     symbol="wordList"
-    title="Flashcard list"
+    title="Flashcards"
     description={`${displayCards.length} of ${$flashcards.length} card${$flashcards.length === 1 ? '' : 's'} shown.`}
     bind:open={wordListOpen}
   >
@@ -593,6 +657,7 @@
             </label>
           </div>
 
+          {#if !hideDecks}
           <div class="library-field">
             <span class="field-label">Deck</span>
             <div class="tag-chip-row tag-chip-row-picker">
@@ -617,6 +682,7 @@
               {/each}
             </div>
           </div>
+          {/if}
 
           {#if $tags.length > 0}
             <div class="tag-chip-row">
@@ -644,7 +710,7 @@
     </div>
 
     <div class="library-list-controls">
-      {#if $decks.length > 0}
+      {#if !hideDecks && $decks.length > 0}
         <div class="library-sort">
           <label class="library-sort__label" for="deck-filter">Deck</label>
           <select id="deck-filter" class="field-input library-sort__select" bind:value={deckFilter}>
@@ -708,19 +774,23 @@
                 <th>#</th>
                 <th>Side A</th>
                 <th>Side B</th>
+                {#if !hideDecks}
                 <th>Deck</th>
+                {/if}
                 <th>Tags</th>
-                <th>Times seen</th>
-                <th>Star</th>
-                <th>Mastered</th>
-                <th>Both ways</th>
+                {#if !hideProgress}
+                  <th>Times seen</th>
+                  <th>Star</th>
+                  <th>Mastered</th>
+                  <th>Both ways</th>
+                {/if}
                 <th class="library-table__actions"></th>
               </tr>
             </thead>
             <tbody>
               {#if displayCards.length === 0}
                 <tr>
-                  <td colspan={panelMode === 'delete' ? 11 : 10} class="library-table__empty">
+                  <td colspan={tableColspan} class="library-table__empty">
                     {#if $flashcards.length === 0}
                       No cards yet. Open Add card above or import a list below.
                     {:else}
@@ -743,22 +813,26 @@
                     <td class="library-table__index">{pageStart + index + 1}</td>
                     <td>{card.sideA}</td>
                     <td>{card.sideB}</td>
+                    {#if !hideDecks}
                     <td class="library-table__deck">
                       <CardDeckEditor cardId={card.id} deckId={card.deckId} decks={$decks} />
                     </td>
+                    {/if}
                     <td class="library-table__tag">
                       <CardTagEditor cardId={card.id} tagIds={card.tagIds} tags={$tags} />
                     </td>
-                    <td class="library-table__number">{card.timesSeen}</td>
-                    <td class="library-table__star">
-                      <StarIcon variant="regular" filled={card.star} class="h-4 w-4" />
-                    </td>
-                    <td class="library-table__star">
-                      <StarIcon variant="special" filled={card.specialStar} class="h-4 w-4" />
-                    </td>
-                    <td class="library-table__star">
-                      <StarIcon variant="bothWays" filled={card.bothWaysStar} class="h-4 w-4" />
-                    </td>
+                    {#if !hideProgress}
+                      <td class="library-table__number">{card.timesSeen}</td>
+                      <td class="library-table__star">
+                        <StarIcon variant="regular" filled={card.star} class="h-4 w-4" />
+                      </td>
+                      <td class="library-table__star">
+                        <StarIcon variant="special" filled={card.specialStar} class="h-4 w-4" />
+                      </td>
+                      <td class="library-table__star">
+                        <StarIcon variant="bothWays" filled={card.bothWaysStar} class="h-4 w-4" />
+                      </td>
+                    {/if}
                     <td class="library-table__actions">
                       <button
                         class="tag-list__delete"
@@ -866,34 +940,38 @@
                     </div>
                   </div>
 
+                  {#if !hideDecks}
                   <div class="library-mobile-card__field">
                     <span class="library-mobile-card__label">Deck</span>
                     <CardDeckEditor cardId={card.id} deckId={card.deckId} decks={$decks} />
                   </div>
+                  {/if}
 
                   <div class="library-mobile-card__field">
                     <span class="library-mobile-card__label">Tags</span>
                     <CardTagEditor cardId={card.id} tagIds={card.tagIds} tags={$tags} />
                   </div>
 
-                  <div class="library-mobile-card__stats">
-                    <div class="library-mobile-card__stat">
-                      <span class="library-mobile-card__label">Seen</span>
-                      <span>{card.timesSeen}</span>
+                  {#if !hideProgress}
+                    <div class="library-mobile-card__stats">
+                      <div class="library-mobile-card__stat">
+                        <span class="library-mobile-card__label">Seen</span>
+                        <span>{card.timesSeen}</span>
+                      </div>
+                      <div class="library-mobile-card__stat">
+                        <span class="library-mobile-card__label">Star</span>
+                        <StarIcon variant="regular" filled={card.star} class="h-4 w-4" />
+                      </div>
+                      <div class="library-mobile-card__stat">
+                        <span class="library-mobile-card__label">Mastered</span>
+                        <StarIcon variant="special" filled={card.specialStar} class="h-4 w-4" />
+                      </div>
+                      <div class="library-mobile-card__stat">
+                        <span class="library-mobile-card__label">Both ways</span>
+                        <StarIcon variant="bothWays" filled={card.bothWaysStar} class="h-4 w-4" />
+                      </div>
                     </div>
-                    <div class="library-mobile-card__stat">
-                      <span class="library-mobile-card__label">Star</span>
-                      <StarIcon variant="regular" filled={card.star} class="h-4 w-4" />
-                    </div>
-                    <div class="library-mobile-card__stat">
-                      <span class="library-mobile-card__label">Mastered</span>
-                      <StarIcon variant="special" filled={card.specialStar} class="h-4 w-4" />
-                    </div>
-                    <div class="library-mobile-card__stat">
-                      <span class="library-mobile-card__label">Both ways</span>
-                      <StarIcon variant="bothWays" filled={card.bothWaysStar} class="h-4 w-4" />
-                    </div>
-                  </div>
+                  {/if}
                 </div>
               </div>
             </article>
@@ -953,11 +1031,12 @@
   </CollapsibleSection>
 </section>
 
+{#if !hideDecks}
 <section class="library-panel">
   <CollapsibleSection
     symbol="decks"
     title="Decks"
-    description="Decks group your flashcards."
+    description="Decks group your flashcards. Publish a deck to share it in the marketplace."
     bind:open={decksOpen}
   >
   {#if deckError}
@@ -1005,6 +1084,14 @@
                 class="tag-list__delete"
                 type="button"
                 disabled={deckCardCount(deck.id) === 0}
+                onclick={() => openPublishDialog(deck.id, deck.label)}
+              >
+                Publish
+              </button>
+              <button
+                class="tag-list__delete"
+                type="button"
+                disabled={deckCardCount(deck.id) === 0}
                 onclick={() =>
                   requestClearDeckCards(deck.id, deck.label, deckCardCount(deck.id))}
               >
@@ -1020,17 +1107,27 @@
             </div>
           {/if}
         </li>
+        {#if deckPublishMessage?.deckId === deck.id}
+          <li
+            class="library-message {deckPublishMessage.error
+              ? 'library-message-error'
+              : 'library-message-success'} deck-list__publish-message"
+          >
+            {deckPublishMessage.text}
+          </li>
+        {/if}
       {/each}
     </ul>
   {/if}
   </CollapsibleSection>
 </section>
+{/if}
 
 <section class="library-panel">
   <CollapsibleSection
     symbol="tags"
     title="Tags"
-    description="Tags label cards within a deck."
+    description={hideDecks ? 'Tags label your flashcards.' : 'Tags label cards within a deck.'}
     bind:open={tagsOpen}
   >
   {#if tagError}
@@ -1089,10 +1186,11 @@
   <CollapsibleSection
     symbol="import"
     title="Import cards"
-    description="Paste a list or upload a .txt file."
+    description="Paste a list, upload a .txt file, or import from the marketplace."
     bind:open={importOpen}
   >
     <form class="import-form" onsubmit={handleImport}>
+      {#if !hideDecks}
       <div class="import-form__deck library-field">
         <span class="field-label">Assign to deck</span>
         <p class="import-form__deck-hint">Imported cards will use this deck unless a line includes tags.</p>
@@ -1118,8 +1216,40 @@
           {/each}
         </div>
       </div>
+      {/if}
 
       <div class="import-form__methods">
+        <div class="import-format-help">
+          <button
+            class="import-format-help__trigger"
+            type="button"
+            aria-expanded={importFormatHelpOpen}
+            aria-controls="import-format-help-panel"
+            onclick={() => (importFormatHelpOpen = !importFormatHelpOpen)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5" stroke-linecap="round" />
+              <circle cx="12" cy="8" r="0.75" fill="currentColor" stroke="none" />
+            </svg>
+            Line format
+          </button>
+          <div
+            id="import-format-help-panel"
+            class="import-format-help__panel"
+            class:import-format-help__panel--open={importFormatHelpOpen}
+            role="region"
+            aria-label="Import line format"
+          >
+            <p class="import-format-help__text">
+              One card per line:
+              <code class="library-code">wordA,wordB</code>
+              or
+              <code class="library-code">wordA,wordB,tag1;tag2;tag3</code>
+            </p>
+          </div>
+        </div>
+
         <section class="import-method" aria-labelledby="import-file-heading">
           <div class="import-method__heading">
             <span class="import-method__icon import-method__icon-file" aria-hidden="true">
@@ -1137,12 +1267,6 @@
           </div>
 
           <div class="import-method__body">
-            <p class="import-method__format">
-              One card per line:
-              <code class="library-code">wordA,wordB</code>
-              or
-              <code class="library-code">wordA,wordB,tag1;tag2;tag3</code>
-            </p>
             <label class="import-file-picker">
               <span class="btn-secondary">Choose .txt file</span>
               <input
@@ -1178,18 +1302,12 @@
             <div class="import-method__intro">
               <h3 id="import-paste-heading" class="import-method__title">Type or paste</h3>
               <p class="import-method__desc">
-                Write your card list directly in the field below — handy for quick edits or smaller batches.
+                Write your card list directly in the field below.
               </p>
             </div>
           </div>
 
           <div class="import-method__body">
-            <p class="import-method__format">
-              One card per line:
-              <code class="library-code">wordA,wordB</code>
-              or
-              <code class="library-code">wordA,wordB,tag1;tag2;tag3</code>
-            </p>
             <label class="import-method__field">
               <span class="sr-only">Card list</span>
               <textarea
@@ -1198,6 +1316,30 @@
                 bind:value={importText}
               ></textarea>
             </label>
+          </div>
+        </section>
+
+        <div class="import-form__divider" aria-hidden="true">
+          <span>Or</span>
+        </div>
+
+        <section class="import-method" aria-labelledby="import-marketplace-heading">
+          <div class="import-method__heading">
+            <span class="import-method__icon import-method__icon-marketplace" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V9.5Z" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <div class="import-method__intro">
+              <h3 id="import-marketplace-heading" class="import-method__title">From marketplace</h3>
+              <p class="import-method__desc">
+                Browse community decks, preview cards, rate quality, and import into your library.
+              </p>
+            </div>
+          </div>
+
+          <div class="import-method__body">
+            <a class="btn-primary marketplace-open-link" href={marketplaceHref}>Open marketplace</a>
           </div>
         </section>
       </div>
@@ -1227,3 +1369,11 @@
     </form>
   </CollapsibleSection>
 </section>
+
+<PublishDeckDialog
+  open={publishDialogOpen}
+  deckId={publishDeckId}
+  defaultTitle={publishDeckTitle}
+  onClose={closePublishDialog}
+  onPublished={handlePublished}
+/>

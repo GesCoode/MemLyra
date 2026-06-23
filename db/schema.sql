@@ -72,3 +72,43 @@ CREATE INDEX idx_flashcards_user ON flashcards(user_id);
 CREATE INDEX idx_sessions_user ON sessions(user_id);
 CREATE INDEX idx_verification_tokens_user ON email_verification_tokens(user_id);
 CREATE INDEX idx_password_reset_tokens_user ON password_reset_tokens(user_id);
+
+CREATE TABLE marketplace_decks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  publisher_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  source_deck_id UUID,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  color TEXT NOT NULL,
+  card_count INT NOT NULL DEFAULT 0,
+  published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  is_listed BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE marketplace_cards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  marketplace_deck_id UUID NOT NULL REFERENCES marketplace_decks(id) ON DELETE CASCADE,
+  side_a TEXT NOT NULL,
+  side_b TEXT NOT NULL,
+  tag_labels JSONB NOT NULL DEFAULT '[]',
+  sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE INDEX idx_marketplace_decks_listed ON marketplace_decks(is_listed, published_at DESC);
+CREATE INDEX idx_marketplace_decks_publisher ON marketplace_decks(publisher_user_id);
+CREATE INDEX idx_marketplace_decks_source ON marketplace_decks(publisher_user_id, source_deck_id);
+CREATE INDEX idx_marketplace_cards_deck ON marketplace_cards(marketplace_deck_id);
+
+CREATE TABLE marketplace_ratings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  marketplace_deck_id UUID NOT NULL REFERENCES marketplace_decks(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  rating SMALLINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (marketplace_deck_id, user_id)
+);
+
+CREATE INDEX idx_marketplace_ratings_deck ON marketplace_ratings(marketplace_deck_id);
+CREATE INDEX idx_marketplace_ratings_user ON marketplace_ratings(user_id);

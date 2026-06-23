@@ -26,6 +26,7 @@
     pool,
     decks = [],
     tags = [],
+    exitLabel = 'Back to dashboard',
     onExit,
     onTryAgain,
     onDashboard
@@ -35,6 +36,7 @@
     pool: Flashcard[];
     decks?: Deck[];
     tags?: Tag[];
+    exitLabel?: string;
     onExit: () => void;
     onTryAgain: () => void;
     onDashboard: () => void;
@@ -89,9 +91,7 @@
   let currentCard = $derived(queue[currentIndex]);
   let segmentWidth = $derived(queue.length > 0 ? 100 / queue.length : 0);
   let mcOptions = $derived(
-    currentCard
-      ? buildMultipleChoiceOptions(currentCard, filteredPool, pool, queue)
-      : []
+    currentCard ? buildMultipleChoiceOptions(currentCard, pool, queue) : []
   );
   let gradedOutcomes = $derived(
     answerOutcomes.filter((outcome): outcome is 'correct' | 'wrong' => outcome !== 'pending')
@@ -549,6 +549,7 @@
       {endedEarly}
       {decks}
       {tags}
+      {exitLabel}
       onTryNew={onExit}
       onTryAgain={onTryAgain}
       onDashboard={onDashboard}

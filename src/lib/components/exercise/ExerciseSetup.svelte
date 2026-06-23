@@ -8,6 +8,7 @@
   import { loadTags, tags as tagsStore } from '$lib/stores/tags';
   import {
     buildExerciseSession,
+    defaultExerciseSessionCount,
     filterFlashcards,
     type ExerciseDirection,
     type ExerciseSettings,
@@ -24,11 +25,15 @@
     cards,
     decks,
     tags,
+    hideDeckFilter = false,
+    libraryHref = '/dashboard/library',
     onStart
   }: {
     cards: Flashcard[];
     decks: Deck[];
     tags: Tag[];
+    hideDeckFilter?: boolean;
+    libraryHref?: string;
     onStart: (session: SessionCard[], settings: ExerciseSettings) => void;
   } = $props();
 
@@ -40,11 +45,11 @@
   let cardCount = $state(20);
   let useMax = $state(false);
   let direction = $state<ExerciseDirection>('aToB');
-  let quizMode = $state<QuizMode>('type');
+  let quizMode = $state<QuizMode>('multipleChoice');
   let saveFeedback = $state<'idle' | 'saved'>('idle');
   let saveFeedbackTimeout: ReturnType<typeof setTimeout> | undefined;
   let settings = $derived<ExerciseSettings>({
-    deckId,
+    deckId: hideDeckFilter ? 'all' : deckId,
     tagIds: selectedTagIds,
     includeKnown,
     includeMastered,
@@ -80,7 +85,9 @@
   function handleCountInput(event: Event) {
     useMax = false;
     const value = Number((event.currentTarget as HTMLInputElement).value);
-    cardCount = Number.isFinite(value) ? Math.max(1, value) : 1;
+    cardCount = Number.isFinite(value)
+      ? clampSessionCount(value, cards.length)
+      : defaultExerciseSessionCount(cards.length);
   }
 
   function toggleIncludeKnown() {
@@ -104,6 +111,16 @@
     return deckList.some((deck) => deck.id === savedDeckId) ? savedDeckId : 'all';
   }
 
+  function clampSessionCount(count: number, librarySize: number): number {
+    const max = defaultExerciseSessionCount(librarySize);
+    return Math.min(Math.max(1, Math.floor(count)), max);
+  }
+
+  function applyDefaultSessionCount() {
+    if (useMax || loadExerciseSetupPreferences()) return;
+    cardCount = defaultExerciseSessionCount(cards.length);
+  }
+
   function applySavedPreferences() {
     const saved = loadExerciseSetupPreferences();
     if (!saved) return;
@@ -111,20 +128,30 @@
     const tagList = get(tagsStore);
     const deckList = get(decksStore);
 
-    deckId = resolveDeckId(saved.deckId, deckList);
+    deckId = hideDeckFilter ? 'all' : resolveDeckId(saved.deckId, deckList);
     selectedTagIds = saved.tagIds.filter((tagId) => tagList.some((tag) => tag.id === tagId));
     includeKnown = saved.includeKnown;
     includeMastered = saved.includeMastered;
     allowPeeking = saved.allowPeeking;
     useMax = saved.useMax;
-    cardCount = saved.cardCount;
+    cardCount = clampSessionCount(saved.cardCount, cards.length);
     direction = saved.direction;
     quizMode = saved.quizMode;
   }
 
+  $effect(() => {
+    cards.length;
+    applyDefaultSessionCount();
+    if (useMax) return;
+    const max = defaultExerciseSessionCount(cards.length);
+    if (cardCount > max) {
+      cardCount = max;
+    }
+  });
+
   function saveConfiguration() {
     saveExerciseSetupPreferences({
-      deckId,
+      deckId: hideDeckFilter ? 'all' : deckId,
       tagIds: selectedTagIds,
       includeKnown,
       includeMastered,
@@ -147,6 +174,7 @@
       await Promise.all([loadTags(), loadDecks()]);
       await tick();
       applySavedPreferences();
+      applyDefaultSessionCount();
     })();
   });
 
@@ -197,6 +225,7 @@
       </header>
 
       <div class="exercise-setup__group-body">
+    {#if !hideDeckFilter}
     <div class="exercise-setup__section">
       <span class="field-label">Deck</span>
       <div class="tag-chip-row tag-chip-row-picker">
@@ -230,6 +259,7 @@
         {/if}
       </div>
     </div>
+    {/if}
 
     <div class="exercise-setup__section">
       <div class="exercise-setup__inline-label">
@@ -318,10 +348,17 @@
       </div>
     </div>
 
-        <p class="exercise-setup__filter-summary">
-          <span class="exercise-setup__filter-summary-count">{matchingCount}</span>
-          flashcard{matchingCount === 1 ? '' : 's'} match your filters
-        </p>
+        <div class="exercise-setup__filter-summary">
+          <p class="exercise-setup__filter-summary-text">
+            <span class="exercise-setup__filter-summary-count">{matchingCount}</span>
+            flashcard{matchingCount === 1 ? '' : 's'} match your filters
+          </p>
+          {#if matchingCount === 0}
+            <a class="btn-secondary exercise-setup__library-link" href={libraryHref}>
+              Add flashcards in library
+            </a>
+          {/if}
+        </div>
       </div>
     </section>
 

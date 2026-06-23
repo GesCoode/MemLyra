@@ -41,6 +41,12 @@
     { text: 'Şimdi ücretsiz kaydol', dir: 'ltr', language: 'Turkish' }
   ];
 
+  let { isLoggedIn = false }: { isLoggedIn?: boolean } = $props();
+
+  const href = $derived(isLoggedIn ? '/dashboard' : '/register');
+  const linkLabel = $derived(
+    isLoggedIn ? 'Open dashboard — animated flashcard preview' : 'Create a free account — animated flashcard preview'
+  );
   const pauseMs = 3500;
   const flipMs = 650;
 
@@ -119,37 +125,43 @@
   });
 </script>
 
-<div class="home-flashcard" aria-live="polite" aria-atomic="true">
-  <div class="home-flashcard__shadow" class:home-flashcard__shadow-active={flipped}></div>
+<a
+  class="home-flashcard home-flashcard--link"
+  href={href}
+  aria-label={linkLabel}
+>
+  <div class="home-flashcard__live" aria-live="polite" aria-atomic="true">
+    <div class="home-flashcard__shadow" class:home-flashcard__shadow-active={flipped}></div>
 
-  <div class="home-flashcard__scene">
-    <div class="home-flashcard__card" class:home-flashcard__card--flipped={flipped}>
-      <!-- Card A: answer (shown first) -->
-      <div class="home-flashcard__side home-flashcard__side--a">
-        <p class="home-flashcard__text" dir={cardA.dir}>{cardA.text}</p>
-        {#key celebrate}
-          <div class="home-flashcard__result home-flashcard__result--celebrate">
-            <span class="home-flashcard__sparkle home-flashcard__sparkle--1" aria-hidden="true"
-              >✦</span
-            >
-            <span class="home-flashcard__sparkle home-flashcard__sparkle--2" aria-hidden="true"
-              >✦</span
-            >
-            <span class="home-flashcard__sparkle home-flashcard__sparkle--3" aria-hidden="true"
-              >✦</span
-            >
-            <span class="home-flashcard__correct">Correct</span>
-            <span class="home-flashcard__next">Next card</span>
-          </div>
-        {/key}
-      </div>
+    <div class="home-flashcard__scene">
+      <div class="home-flashcard__card" class:home-flashcard__card--flipped={flipped}>
+        <!-- Card A: answer (shown first) -->
+        <div class="home-flashcard__side home-flashcard__side--a">
+          <p class="home-flashcard__text" dir={cardA.dir}>{cardA.text}</p>
+          {#key celebrate}
+            <div class="home-flashcard__result home-flashcard__result--celebrate">
+              <span class="home-flashcard__sparkle home-flashcard__sparkle--1" aria-hidden="true"
+                >✦</span
+              >
+              <span class="home-flashcard__sparkle home-flashcard__sparkle--2" aria-hidden="true"
+                >✦</span
+              >
+              <span class="home-flashcard__sparkle home-flashcard__sparkle--3" aria-hidden="true"
+                >✦</span
+              >
+              <span class="home-flashcard__correct">Correct</span>
+              <span class="home-flashcard__next">Next card</span>
+            </div>
+          {/key}
+        </div>
 
-      <!-- Card B: question (shown second) -->
-      <div class="home-flashcard__side home-flashcard__side--b">
-        <p class="home-flashcard__prompt">What is</p>
-        <p class="home-flashcard__text" dir={cardB.question.dir}>{cardB.question.text}</p>
-        <p class="home-flashcard__hint">In {cardB.hintLanguage}</p>
+        <!-- Card B: question (shown second) -->
+        <div class="home-flashcard__side home-flashcard__side--b">
+          <p class="home-flashcard__prompt">What is</p>
+          <p class="home-flashcard__text" dir={cardB.question.dir}>{cardB.question.text}</p>
+          <p class="home-flashcard__hint">In {cardB.hintLanguage}?</p>
+        </div>
       </div>
     </div>
   </div>
-</div>
+</a>

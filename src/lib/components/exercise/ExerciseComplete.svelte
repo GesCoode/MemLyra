@@ -24,6 +24,7 @@
     endedEarly,
     decks = [],
     tags = [],
+    exitLabel = 'Back to dashboard',
     onTryAgain,
     onTryNew,
     onDashboard
@@ -40,6 +41,7 @@
     endedEarly: boolean;
     decks?: Deck[];
     tags?: Tag[];
+    exitLabel?: string;
     onTryAgain: () => void;
     onTryNew: () => void;
     onDashboard: () => void;
@@ -220,7 +222,7 @@
           <path d="M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </span>
-      Back to dashboard
+      {exitLabel}
     </button>
   </div>
 </section>

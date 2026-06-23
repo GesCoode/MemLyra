@@ -32,7 +32,8 @@ docker compose up -d --build
 ### Run a database migration
 
 ```bash
-docker exec -i memlyra-db psql -U memlyra -d memlyra < db/migrations/003_password_reset.sql
+docker exec -i memlyra-db psql -U memlyra -d memlyra < db/migrations/002_marketplace.sql
+docker exec -i memlyra-db psql -U memlyra -d memlyra < db/migrations/003_marketplace_ratings.sql
 ```
 
 ## Nginx

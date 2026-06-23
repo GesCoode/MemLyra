@@ -15,6 +15,6 @@
   </div>
 
   <div class="library-stack">
-    <WordLibrary />
+    <WordLibrary marketplaceHref="/dashboard/marketplace" />
   </div>
 </section>

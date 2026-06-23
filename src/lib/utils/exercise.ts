@@ -71,6 +71,12 @@ function toSessionCard(card: Flashcard, direction: CardDirection): SessionCard {
   };
 }
 
+/** Default cards-in-session: 20, or the full library size when smaller. */
+export function defaultExerciseSessionCount(librarySize: number): number {
+  if (librarySize <= 0) return 1;
+  return Math.min(20, librarySize);
+}
+
 export function buildExerciseSession(
   cards: Flashcard[],
   settings: ExerciseSettings
@@ -101,6 +107,18 @@ function answerForDirection(card: Flashcard, direction: CardDirection): string {
   return normalizeAnswer(direction === 'aToB' ? card.sideB : card.sideA);
 }
 
+function hasSameDeckAndTags(a: Flashcard, b: Flashcard): boolean {
+  if (a.deckId !== b.deckId) return false;
+  if (a.tagIds.length !== b.tagIds.length) return false;
+
+  const tagSet = new Set(a.tagIds);
+  return b.tagIds.every((tagId) => tagSet.has(tagId));
+}
+
+function cardsMatchingDeckAndTags(cards: Flashcard[], reference: Flashcard): Flashcard[] {
+  return cards.filter((card) => hasSameDeckAndTags(reference, card));
+}
+
 function collectWrongAnswers(cards: Flashcard[], sessionCard: SessionCard): string[] {
   const correct = normalizeAnswer(sessionCard.answer);
 
@@ -112,14 +130,21 @@ function collectWrongAnswers(cards: Flashcard[], sessionCard: SessionCard): stri
 
 function collectWrongAnswersFromSession(
   sessionCards: SessionCard[],
-  sessionCard: SessionCard
+  sessionCard: SessionCard,
+  allCards: Flashcard[],
+  reference: Flashcard
 ): string[] {
   const correct = normalizeAnswer(sessionCard.answer);
 
   return sessionCards
-    .filter(
-      (card) => card.cardId !== sessionCard.cardId && card.direction === sessionCard.direction
-    )
+    .filter((card) => {
+      if (card.cardId === sessionCard.cardId || card.direction !== sessionCard.direction) {
+        return false;
+      }
+
+      const flashcard = allCards.find((item) => item.id === card.cardId);
+      return flashcard ? hasSameDeckAndTags(reference, flashcard) : false;
+    })
     .map((card) => normalizeAnswer(card.answer))
     .filter((answer) => answer.length > 0 && answer !== correct);
 }
@@ -140,15 +165,20 @@ function mergeUniqueAnswers(...groups: string[][]): string[] {
 
 export function buildMultipleChoiceOptions(
   sessionCard: SessionCard,
-  filteredPool: Flashcard[],
-  allCards: Flashcard[] = filteredPool,
+  allCards: Flashcard[],
   sessionCards: SessionCard[] = []
 ): string[] {
   const correct = normalizeAnswer(sessionCard.answer);
+  const reference = allCards.find((card) => card.id === sessionCard.cardId);
+
+  if (!reference) {
+    return [correct];
+  }
+
+  const matchingPool = cardsMatchingDeckAndTags(allCards, reference);
   const uniqueWrong = mergeUniqueAnswers(
-    collectWrongAnswers(filteredPool, sessionCard),
-    collectWrongAnswers(allCards, sessionCard),
-    collectWrongAnswersFromSession(sessionCards, sessionCard)
+    collectWrongAnswers(matchingPool, sessionCard),
+    collectWrongAnswersFromSession(sessionCards, sessionCard, allCards, reference)
   );
   const wrong = shuffle(uniqueWrong).slice(0, 2);
 

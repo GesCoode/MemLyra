@@ -1,4 +1,13 @@
 import { writable } from 'svelte/store';
+import { guestActive, runGuestMutation } from '$lib/utils/guestStoreBridge';
+import { loadGuestIntoStores } from '$lib/utils/guestSync';
+import {
+  guestCreateTag,
+  guestDeleteTag,
+  guestFindOrCreateTag,
+  guestRenameTag,
+  readGuestData
+} from '$lib/utils/guestStorage';
 
 export type Tag = {
   id: string;
@@ -9,6 +18,11 @@ export type Tag = {
 export const tags = writable<Tag[]>([]);
 
 export async function loadTags(): Promise<void> {
+  if (guestActive()) {
+    loadGuestIntoStores();
+    return;
+  }
+
   const response = await fetch('/api/tags');
   if (!response.ok) {
     tags.set([]);
@@ -27,6 +41,12 @@ export async function createTag(label: string): Promise<Tag | null> {
   const trimmed = label.trim();
   if (!trimmed) return null;
 
+  if (guestActive()) {
+    const result = guestCreateTag(readGuestData(), trimmed);
+    runGuestMutation(() => result.data);
+    return result.tag;
+  }
+
   const response = await fetch('/api/tags', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -44,6 +64,12 @@ export async function findOrCreateTag(label: string): Promise<Tag | null> {
   const trimmed = label.trim();
   if (!trimmed) return null;
 
+  if (guestActive()) {
+    const result = guestFindOrCreateTag(readGuestData(), trimmed);
+    runGuestMutation(() => result.data);
+    return result.tag;
+  }
+
   let found: Tag | null = null;
   tags.update((items) => {
     const existing = items.find((tag) => tag.label.toLowerCase() === trimmed.toLowerCase());
@@ -60,6 +86,11 @@ export async function renameTag(tagId: string, label: string): Promise<boolean> 
   const trimmed = label.trim();
   if (!trimmed) return false;
 
+  if (guestActive()) {
+    runGuestMutation((data) => guestRenameTag(data, tagId, trimmed));
+    return true;
+  }
+
   const response = await fetch('/api/tags', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -74,6 +105,11 @@ export async function renameTag(tagId: string, label: string): Promise<boolean> 
 }
 
 export async function deleteTag(tagId: string): Promise<boolean> {
+  if (guestActive()) {
+    runGuestMutation((data) => guestDeleteTag(data, tagId));
+    return true;
+  }
+
   const response = await fetch(`/api/tags?id=${encodeURIComponent(tagId)}`, {
     method: 'DELETE'
   });
@@ -99,6 +135,11 @@ export function getTagById(tagId: string, items: Tag[]): Tag | undefined {
 }
 
 export async function clearAllTags(): Promise<void> {
+  if (guestActive()) {
+    runGuestMutation((data) => ({ ...data, tags: [] }));
+    return;
+  }
+
   const current = await fetch('/api/tags').then((response) =>
     response.ok ? response.json() : { tags: [] }
   ) as { tags: Tag[] };
