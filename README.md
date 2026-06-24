@@ -145,11 +145,15 @@ See [deploy/DEPLOY.md](deploy/DEPLOY.md) for production notes.
 
 ## Deployment
 
-Production runs on a VPS with Docker Compose, Nginx, and Let's Encrypt. Full instructions:
+Production runs on a VPS with Docker Compose, Nginx, and Let's Encrypt. Deploy manually on the server:
 
-**[deploy/DEPLOY.md](deploy/DEPLOY.md)**
+```bash
+cd ~/MemLyra
+git pull
+docker compose up -d --build
+```
 
-CI/CD: pushes to `main` trigger [.github/workflows/deploy.yml](.github/workflows/deploy.yml), which SSHs into the server, pulls, and rebuilds. Pending migrations run automatically when the app starts.
+Pending database migrations run automatically when the app starts. Full instructions: **[deploy/DEPLOY.md](deploy/DEPLOY.md)**
 
 Nginx config template: `deploy/nginx/memlyra.conf`
 
