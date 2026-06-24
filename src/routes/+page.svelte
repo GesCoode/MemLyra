@@ -1,6 +1,12 @@
 <script lang="ts">
   import HomeFlashcard from '$lib/components/home/HomeFlashcard.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
   import { PRACTICE_ENTRY_LABEL } from '$lib/app';
+  import {
+    buildSoftwareApplicationJsonLd,
+    buildWebSiteJsonLd,
+    SEO_DESCRIPTIONS
+  } from '$lib/utils/seo';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -8,13 +14,13 @@
   const isLoggedIn = $derived(data.user !== null);
 </script>
 
-<svelte:head>
-  <title>MemLyra — free flashcard practice</title>
-  <meta
-    name="description"
-    content="MemLyra is a free flashcard platform. Start practicing immediately or create an account to save your library and track progress."
-  />
-</svelte:head>
+<SeoHead
+  title="MemLyra — free flashcard practice"
+  description={SEO_DESCRIPTIONS.home}
+  path="/"
+  includeBrand={false}
+  jsonLd={[buildWebSiteJsonLd(), buildSoftwareApplicationJsonLd()]}
+/>
 
 <section class="page-content home-page">
   <div class="home-hero">

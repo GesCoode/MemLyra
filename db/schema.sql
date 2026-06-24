@@ -78,9 +78,12 @@ CREATE TABLE marketplace_decks (
   publisher_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   source_deck_id UUID,
   title TEXT NOT NULL,
+  slug TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   color TEXT NOT NULL,
   card_count INT NOT NULL DEFAULT 0,
+  rating_sum INT NOT NULL DEFAULT 0,
+  rating_count INT NOT NULL DEFAULT 0,
   published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   is_listed BOOLEAN NOT NULL DEFAULT TRUE
@@ -96,6 +99,7 @@ CREATE TABLE marketplace_cards (
 );
 
 CREATE INDEX idx_marketplace_decks_listed ON marketplace_decks(is_listed, published_at DESC);
+CREATE UNIQUE INDEX idx_marketplace_decks_slug ON marketplace_decks(slug);
 CREATE INDEX idx_marketplace_decks_publisher ON marketplace_decks(publisher_user_id);
 CREATE INDEX idx_marketplace_decks_source ON marketplace_decks(publisher_user_id, source_deck_id);
 CREATE INDEX idx_marketplace_cards_deck ON marketplace_cards(marketplace_deck_id);
@@ -112,3 +116,72 @@ CREATE TABLE marketplace_ratings (
 
 CREATE INDEX idx_marketplace_ratings_deck ON marketplace_ratings(marketplace_deck_id);
 CREATE INDEX idx_marketplace_ratings_user ON marketplace_ratings(user_id);
+
+CREATE TABLE rate_limit_buckets (
+  key TEXT PRIMARY KEY,
+  count INT NOT NULL DEFAULT 1,
+  reset_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX idx_rate_limit_reset ON rate_limit_buckets(reset_at);
+
+CREATE OR REPLACE FUNCTION sync_marketplace_deck_rating_stats()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    UPDATE marketplace_decks
+    SET
+      rating_sum = GREATEST(0, rating_sum - OLD.rating),
+      rating_count = GREATEST(0, rating_count - 1)
+    WHERE id = OLD.marketplace_deck_id;
+    RETURN OLD;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    UPDATE marketplace_decks
+    SET
+      rating_sum = rating_sum + NEW.rating,
+      rating_count = rating_count + 1
+    WHERE id = NEW.marketplace_deck_id;
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'UPDATE' THEN
+    IF OLD.marketplace_deck_id IS DISTINCT FROM NEW.marketplace_deck_id THEN
+      UPDATE marketplace_decks
+      SET
+        rating_sum = GREATEST(0, rating_sum - OLD.rating),
+        rating_count = GREATEST(0, rating_count - 1)
+      WHERE id = OLD.marketplace_deck_id;
+      UPDATE marketplace_decks
+      SET
+        rating_sum = rating_sum + NEW.rating,
+        rating_count = rating_count + 1
+      WHERE id = NEW.marketplace_deck_id;
+    ELSIF OLD.rating IS DISTINCT FROM NEW.rating THEN
+      UPDATE marketplace_decks
+      SET rating_sum = rating_sum - OLD.rating + NEW.rating
+      WHERE id = NEW.marketplace_deck_id;
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_marketplace_ratings_stats
+AFTER INSERT OR UPDATE OR DELETE ON marketplace_ratings
+FOR EACH ROW EXECUTE FUNCTION sync_marketplace_deck_rating_stats();
+
+CREATE TABLE schema_migrations (
+  id TEXT PRIMARY KEY,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO schema_migrations (id) VALUES
+  ('001_flashcard_library.sql'),
+  ('002_marketplace.sql'),
+  ('003_marketplace_ratings.sql'),
+  ('004_marketplace_slug.sql'),
+  ('005_rate_limits_and_rating_stats.sql');

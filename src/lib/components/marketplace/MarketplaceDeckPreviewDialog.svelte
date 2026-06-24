@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { modalDialog } from '$lib/actions/modalDialog';
   import MarketplaceStarRating from '$lib/components/marketplace/MarketplaceStarRating.svelte';
   import {
     fetchMarketplaceDeck,
@@ -8,7 +9,8 @@
   } from '$lib/stores/marketplace';
   import {
     formatMarketplaceRating,
-    MARKETPLACE_PREVIEW_CARD_COUNT
+    MARKETPLACE_PREVIEW_CARD_COUNT,
+    marketplaceDeckPath
   } from '$lib/utils/marketplace';
   import { deckIndexStyle } from '$lib/utils/tagColors';
 
@@ -33,22 +35,18 @@
   let detail = $state<MarketplaceDeckDetail | null>(null);
   let loading = $state(false);
   let error = $state('');
-  let showAllCards = $state(false);
   let ratingMessage = $state('');
+  let ratingIsError = $state(false);
   let ratingSaving = $state(false);
 
-  let previewCards = $derived(
-    detail && !showAllCards
-      ? detail.cards.slice(0, MARKETPLACE_PREVIEW_CARD_COUNT)
-      : (detail?.cards ?? [])
-  );
+  let previewCards = $derived(detail?.cards?.slice(0, MARKETPLACE_PREVIEW_CARD_COUNT) ?? []);
 
   $effect(() => {
     if (!open || !deckId) {
       detail = null;
       error = '';
-      showAllCards = false;
       ratingMessage = '';
+      ratingIsError = false;
       return;
     }
 
@@ -59,7 +57,6 @@
     loading = true;
     error = '';
     detail = null;
-    showAllCards = false;
 
     try {
       const result = await fetchMarketplaceDeck(id);
@@ -81,12 +78,14 @@
 
     ratingSaving = true;
     ratingMessage = '';
+    ratingIsError = false;
 
     const result = await rateMarketplaceDeck(deckId, rating);
     ratingSaving = false;
 
     if (result.error) {
       ratingMessage = result.error;
+      ratingIsError = true;
       return;
     }
 
@@ -94,6 +93,7 @@
       detail = detail ? { ...detail, ...result.deck } : null;
       onUpdated?.(result.deck);
       ratingMessage = 'Thanks for rating this deck.';
+      ratingIsError = false;
     }
   }
 
@@ -111,6 +111,7 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="marketplace-preview-title"
+    use:modalDialog={{ onClose }}
   >
     {#if loading}
       <p class="marketplace-page__status">Loading deck…</p>
@@ -151,11 +152,18 @@
             <MarketplaceStarRating
               value={detail.userRating ?? 0}
               interactive
+              disabled={ratingSaving}
               label="Rate this deck"
               onChange={handleRate}
             />
             {#if ratingMessage}
-              <p class="marketplace-detail__hint">{ratingMessage}</p>
+              <p
+                class="marketplace-detail__hint"
+                class:marketplace-detail__hint--success={!ratingIsError}
+                class:marketplace-detail__hint--error={ratingIsError}
+              >
+                {ratingMessage}
+              </p>
             {/if}
           {:else}
             <p class="marketplace-detail__hint">
@@ -168,13 +176,13 @@
       <section class="marketplace-detail__preview" aria-labelledby="marketplace-preview-cards-heading">
         <div class="marketplace-detail__preview-header">
           <h4 id="marketplace-preview-cards-heading" class="marketplace-detail__preview-title">
-            {showAllCards ? 'All cards' : 'Preview'}
+            Preview
+            {#if (detail.cards?.length ?? 0) > MARKETPLACE_PREVIEW_CARD_COUNT}
+              <span class="marketplace-detail__preview-count">
+                (first {MARKETPLACE_PREVIEW_CARD_COUNT} of {detail.cardCount})
+              </span>
+            {/if}
           </h4>
-          {#if detail.cards.length > MARKETPLACE_PREVIEW_CARD_COUNT}
-            <button class="btn-text-link" type="button" onclick={() => (showAllCards = !showAllCards)}>
-              {showAllCards ? 'Show preview' : `See all ${detail.cardCount} cards`}
-            </button>
-          {/if}
         </div>
 
         <div class="marketplace-detail__table-wrap">
@@ -199,8 +207,11 @@
 
       <div class="confirm-dialog__actions">
         <button class="btn-secondary" type="button" onclick={onClose}>Close</button>
+        <a class="btn-secondary" href={marketplaceDeckPath(detail.slug)} onclick={onClose}>
+          Full preview
+        </a>
         {#if onImport}
-          <button class="btn-primary" type="button" onclick={handleImport}>
+          <button class="btn-marketplace" type="button" onclick={handleImport}>
             Import {detail.cardCount} card{detail.cardCount === 1 ? '' : 's'}
           </button>
         {/if}

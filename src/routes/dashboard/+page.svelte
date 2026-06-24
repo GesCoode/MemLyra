@@ -1,7 +1,9 @@
 <script lang="ts">
   import StarCounter from '$lib/components/StarCounter.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
   import { user } from '$lib/stores/auth';
   import { bothWaysCount, learnedCount, masteredCount } from '$lib/stores/flashcards';
+  import { SEO_DESCRIPTIONS } from '$lib/utils/seo';
 
   const sections = [
     {
@@ -31,9 +33,7 @@
   ] as const;
 </script>
 
-<svelte:head>
-  <title>Dashboard · MemLyra</title>
-</svelte:head>
+<SeoHead title="Dashboard" description={SEO_DESCRIPTIONS.dashboard} noindex={true} />
 
 <section class="page-content">
   <div class="library-header mt-0">

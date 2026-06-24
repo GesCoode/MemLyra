@@ -7,8 +7,21 @@ export const DEV_ADMIN_EMAIL = 'admin@local';
 export const DEV_ADMIN_NAME = 'admin';
 export const DEV_ADMIN_PASSWORD = 'admin';
 
+function isLocalOrigin(): boolean {
+  const origin = env.ORIGIN?.trim().toLowerCase() ?? '';
+  return (
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1') ||
+    origin.startsWith('http://[::1]')
+  );
+}
+
 export function isDevAdminEnabled(): boolean {
-  return env.NODE_ENV !== 'production';
+  if (env.NODE_ENV === 'production') {
+    return false;
+  }
+
+  return isLocalOrigin();
 }
 
 /** Map short local login "admin" to the seeded dev account email. */

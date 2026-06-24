@@ -5,6 +5,7 @@
   import CardDeckEditor from '$lib/components/library/CardDeckEditor.svelte';
   import CardTagEditor from '$lib/components/library/CardTagEditor.svelte';
   import PublishDeckDialog from '$lib/components/marketplace/PublishDeckDialog.svelte';
+  import MarketplaceIcon from '$lib/components/icons/MarketplaceIcon.svelte';
   import StarIcon from '$lib/components/icons/StarIcon.svelte';
   import {
     createFlashcard,
@@ -42,7 +43,7 @@
   let sortField = $state<SortField>('addedDate');
   let sortDirection = $state<SortDirection>('desc');
   let selectedIds = $state<string[]>([]);
-  let wordListOpen = $state(false);
+  let wordListOpen = $state(true);
   let decksOpen = $state(false);
   let tagsOpen = $state(false);
   let importOpen = $state(false);
@@ -359,6 +360,17 @@
     publishDeckTitle = '';
   }
 
+  function openAddCardsFromPublish() {
+    closePublishDialog();
+    wordListOpen = true;
+    addFormOpen = true;
+  }
+
+  function openImportFromPublish() {
+    closePublishDialog();
+    importOpen = true;
+  }
+
   function handlePublished(message: string) {
     if (!publishDeckId) return;
     deckPublishMessage = { deckId: publishDeckId, text: message, error: false };
@@ -614,19 +626,32 @@
     <div class="library-add-area">
       <div class="library-top-actions">
         <button
-          class={addFormOpen ? 'btn-primary' : 'btn-secondary'}
+          class="{addFormOpen ? 'btn-primary' : 'btn-secondary'} library-action-btn"
           type="button"
           onclick={toggleAddForm}
         >
+          <svg class="library-action-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
           {addFormOpen ? 'Hide add card' : 'Add card'}
         </button>
         <button
-          class={panelMode === 'delete' ? 'btn-primary' : 'btn-secondary'}
+          class="{panelMode === 'delete' ? 'btn-primary' : 'btn-secondary'} library-action-btn"
           type="button"
           onclick={toggleDeleteMode}
         >
+          <svg class="library-action-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18" />
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <path d="M19 6l-1 14H6L5 6" />
+            <path d="M10 11v6M14 11v6" />
+          </svg>
           Delete card(s)
         </button>
+        <a class="btn-marketplace library-action-btn" href={marketplaceHref}>
+          <MarketplaceIcon class="library-action-btn__icon" />
+          Marketplace
+        </a>
         {#if panelMode === 'delete'}
           <button
             class="btn-primary"
@@ -1081,7 +1106,7 @@
                 Rename
               </button>
               <button
-                class="tag-list__delete"
+                class="tag-list__delete tag-list__marketplace"
                 type="button"
                 disabled={deckCardCount(deck.id) === 0}
                 onclick={() => openPublishDialog(deck.id, deck.label)}
@@ -1189,6 +1214,31 @@
     description="Paste a list, upload a .txt file, or import from the marketplace."
     bind:open={importOpen}
   >
+    <section class="import-method" aria-labelledby="import-marketplace-heading">
+      <div class="import-method__heading">
+        <span class="import-method__icon import-method__icon-marketplace" aria-hidden="true">
+          <MarketplaceIcon />
+        </span>
+        <div class="import-method__intro">
+          <h3 id="import-marketplace-heading" class="import-method__title">From marketplace</h3>
+          <p class="import-method__desc">
+            Browse community decks, preview cards, and import into your library.
+          </p>
+        </div>
+      </div>
+
+      <div class="import-method__body">
+        <a class="btn-marketplace marketplace-open-link library-action-btn" href={marketplaceHref}>
+          <MarketplaceIcon class="library-action-btn__icon" />
+          Open marketplace
+        </a>
+      </div>
+    </section>
+
+    <div class="import-form__divider" aria-hidden="true">
+      <span>Or import from text</span>
+    </div>
+
     <form class="import-form" onsubmit={handleImport}>
       {#if !hideDecks}
       <div class="import-form__deck library-field">
@@ -1318,30 +1368,6 @@
             </label>
           </div>
         </section>
-
-        <div class="import-form__divider" aria-hidden="true">
-          <span>Or</span>
-        </div>
-
-        <section class="import-method" aria-labelledby="import-marketplace-heading">
-          <div class="import-method__heading">
-            <span class="import-method__icon import-method__icon-marketplace" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                <path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V9.5Z" stroke-linejoin="round" />
-              </svg>
-            </span>
-            <div class="import-method__intro">
-              <h3 id="import-marketplace-heading" class="import-method__title">From marketplace</h3>
-              <p class="import-method__desc">
-                Browse community decks, preview cards, rate quality, and import into your library.
-              </p>
-            </div>
-          </div>
-
-          <div class="import-method__body">
-            <a class="btn-primary marketplace-open-link" href={marketplaceHref}>Open marketplace</a>
-          </div>
-        </section>
       </div>
 
       <div class="import-form__actions">
@@ -1376,4 +1402,6 @@
   defaultTitle={publishDeckTitle}
   onClose={closePublishDialog}
   onPublished={handlePublished}
+  onOpenAddCards={openAddCardsFromPublish}
+  onOpenImport={openImportFromPublish}
 />

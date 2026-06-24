@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { APP_NAME } from '$lib/app';
   import AuthCard from '$lib/components/AuthCard.svelte';
   import PasswordInput from '$lib/components/PasswordInput.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
   import { validatePassword } from '$lib/utils/passwordPolicy';
+  import { SEO_DESCRIPTIONS } from '$lib/utils/seo';
 
   let name = $state('');
   let email = $state('');
@@ -57,9 +58,12 @@
   }
 </script>
 
-<svelte:head>
-  <title>Register · {APP_NAME}</title>
-</svelte:head>
+<SeoHead
+  title="Create account"
+  description={SEO_DESCRIPTIONS.register}
+  path="/register"
+  noindex={true}
+/>
 
 <AuthCard
   title="Create account"

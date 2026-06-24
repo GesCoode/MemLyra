@@ -1,13 +1,15 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import AccountVerification from '$lib/components/AccountVerification.svelte';
   import AuthCard from '$lib/components/AuthCard.svelte';
   import PasswordInput from '$lib/components/PasswordInput.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
 
   import { APP_NAME, SESSION_STORAGE_KEYS } from '$lib/app';
-  import { migrateGuestDataIfPresent } from '$lib/utils/guestMigrateClient';
+  import { completePostAuth } from '$lib/utils/guestMigrateClient';
+  import { SEO_DESCRIPTIONS } from '$lib/utils/seo';
+  import { loginHref, sanitizeRedirectPath } from '$lib/utils/loginRedirect';
 
   const VERIFICATION_KEY = SESSION_STORAGE_KEYS.verification;
 
@@ -69,9 +71,7 @@
         return;
       }
 
-      await migrateGuestDataIfPresent();
-      await invalidateAll();
-      goto('/dashboard', { replaceState: true });
+      await completePostAuth(sanitizeRedirectPath($page.url.searchParams.get('redirect')));
     } catch {
       error = 'Could not sign in.';
     } finally {
@@ -116,9 +116,12 @@
   }
 </script>
 
-<svelte:head>
-  <title>{verification ? `Account removed · ${APP_NAME}` : `Log in · ${APP_NAME}`}</title>
-</svelte:head>
+<SeoHead
+  title={verification ? 'Account removed' : 'Log in'}
+  description={SEO_DESCRIPTIONS.login}
+  path="/login"
+  noindex={true}
+/>
 
 {#if verification}
   <section class="page-content account-page">

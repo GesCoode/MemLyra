@@ -2,12 +2,14 @@
   import { goto } from '$app/navigation';
   import ExerciseSession from '$lib/components/exercise/ExerciseSession.svelte';
   import ExerciseSetup from '$lib/components/exercise/ExerciseSetup.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
   import { PRACTICE_HUB_TITLE } from '$lib/app';
   import { decks } from '$lib/stores/decks';
   import { flashcards } from '$lib/stores/flashcards';
   import { tags } from '$lib/stores/tags';
   import { exerciseSessionActive } from '$lib/stores/exerciseUi';
   import { cloneExerciseSession, type ExerciseSettings, type SessionCard } from '$lib/utils/exercise';
+  import { SEO_DESCRIPTIONS } from '$lib/utils/seo';
 
   let activeSession = $state<SessionCard[] | null>(null);
   let activeSettings = $state<ExerciseSettings | null>(null);
@@ -38,9 +40,12 @@
   }
 </script>
 
-<svelte:head>
-  <title>Start exercise · MemLyra</title>
-</svelte:head>
+<SeoHead
+  title="Start exercise"
+  description={SEO_DESCRIPTIONS.tryExercise}
+  path="/try/exercise"
+  noindex={true}
+/>
 
 <section class="page-content" class:page-content--exercise={$exerciseSessionActive}>
   {#if activeSession && activeSettings}

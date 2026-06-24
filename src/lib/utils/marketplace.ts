@@ -1,5 +1,6 @@
 export type MarketplaceDeckSummary = {
   id: string;
+  slug: string;
   title: string;
   description: string;
   color: string;
@@ -26,8 +27,13 @@ export type MarketplaceDeckDetail = MarketplaceDeckSummary & {
 
 export const MARKETPLACE_PREVIEW_CARD_COUNT = 5;
 
-export function marketplaceCardsToImportRows(cards: MarketplaceCard[]) {
-  return cards.map((card) => ({
+export function marketplaceDeckPath(deck: Pick<MarketplaceDeckSummary, 'slug'> | string): string {
+  const slug = typeof deck === 'string' ? deck : deck.slug;
+  return `/marketplace/${slug}`;
+}
+
+export function marketplaceCardsToImportRows(cards: MarketplaceCard[] | undefined) {
+  return (cards ?? []).map((card) => ({
     front: card.sideA,
     back: card.sideB,
     tagLabels: card.tagLabels
@@ -52,6 +58,7 @@ export function filterMarketplaceDecks(
   return decks.filter(
     (deck) =>
       deck.title.toLowerCase().includes(normalized) ||
+      deck.slug.toLowerCase().includes(normalized) ||
       deck.description.toLowerCase().includes(normalized) ||
       deck.publisherName.toLowerCase().includes(normalized)
   );

@@ -1,5 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { resetPasswordWithToken } from '$lib/server/auth';
+import { validatePassword } from '$lib/utils/passwordPolicy';
 
 export const POST: RequestHandler = async ({ request }) => {
   let body: { token?: string; password?: string };
@@ -19,6 +20,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
   if (!password) {
     return json({ error: 'Enter a new password.' }, { status: 400 });
+  }
+
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return json({ error: passwordError }, { status: 400 });
   }
 
   const updated = await resetPasswordWithToken(token, password);

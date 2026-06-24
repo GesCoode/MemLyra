@@ -2,8 +2,11 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import {
   listMarketplaceDecks,
   listPublishedDecksForUser,
-  publishDeckToMarketplace
+  publishDeckToMarketplace,
+  toOwnerSummary,
+  toPublicSummary
 } from '$lib/server/marketplace';
+import { checkRateLimit, rateLimitKey } from '$lib/server/rateLimit';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
   const mine = url.searchParams.get('mine') === 'true';
@@ -14,16 +17,21 @@ export const GET: RequestHandler = async ({ locals, url }) => {
     }
 
     const decks = await listPublishedDecksForUser(locals.user.id);
-    return json({ decks });
+    return json({ decks: decks.map(toOwnerSummary) });
   }
 
   const decks = await listMarketplaceDecks();
-  return json({ decks });
+  return json({ decks: decks.map(toPublicSummary) });
 };
 
-export const POST: RequestHandler = async ({ locals, request }) => {
+export const POST: RequestHandler = async ({ locals, request, getClientAddress }) => {
   if (!locals.user) {
     return json({ error: 'Not authenticated.' }, { status: 401 });
+  }
+
+  const ip = getClientAddress();
+  if (!(await checkRateLimit(rateLimitKey('marketplace-publish', ip, locals.user.id), 20, 60 * 60 * 1000))) {
+    return json({ error: 'Too many publish attempts. Try again later.' }, { status: 429 });
   }
 
   let body: { deckId?: string; title?: string; description?: string };
@@ -40,13 +48,13 @@ export const POST: RequestHandler = async ({ locals, request }) => {
   }
 
   try {
-    const deck = await publishDeckToMarketplace(
+    const result = await publishDeckToMarketplace(
       locals.user.id,
       deckId,
       body.title?.trim() ?? '',
       body.description?.trim() ?? ''
     );
-    return json({ deck });
+    return json({ deck: toOwnerSummary(result.deck), updated: result.updated });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not publish deck.';
     return json({ error: message }, { status: 400 });

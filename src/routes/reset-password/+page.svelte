@@ -2,6 +2,8 @@
   import { goto } from '$app/navigation';
   import AuthCard from '$lib/components/AuthCard.svelte';
   import PasswordInput from '$lib/components/PasswordInput.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
+  import { SEO_DESCRIPTIONS } from '$lib/utils/seo';
 
   let { data } = $props();
 
@@ -49,11 +51,12 @@
   }
 </script>
 
-<svelte:head>
-  <title>
-    {data.status === 'ready' ? 'Reset password · MemLyra' : 'Invalid link · MemLyra'}
-  </title>
-</svelte:head>
+<SeoHead
+  title={data.status === 'ready' ? 'Reset password' : 'Invalid link'}
+  description={SEO_DESCRIPTIONS.resetPassword}
+  path="/reset-password"
+  noindex={true}
+/>
 
 {#if data.status === 'invalid'}
   <section class="page-content flex min-h-[calc(100vh-5rem)] items-center justify-center">

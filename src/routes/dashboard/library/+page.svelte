@@ -1,10 +1,10 @@
 <script lang="ts">
   import WordLibrary from '$lib/components/library/WordLibrary.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
+  import { SEO_DESCRIPTIONS } from '$lib/utils/seo';
 </script>
 
-<svelte:head>
-  <title>Flashcard library · MemLyra</title>
-</svelte:head>
+<SeoHead title="Flashcard library" description={SEO_DESCRIPTIONS.dashboardLibrary} noindex={true} />
 
 <section class="page-content">
   <a class="btn-text-link" href="/dashboard">← Back to dashboard</a>

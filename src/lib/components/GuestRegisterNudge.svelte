@@ -11,7 +11,7 @@
 {#if variant === 'banner'}
   <aside class="guest-nudge guest-nudge--banner {className}" role="note">
     <p class="guest-nudge__text">
-      <strong>Guest mode</strong> — your flashcards and progress are saved on this device only.
+      Guest mode — your flashcards and progress are saved on this device only.
       <a class="guest-nudge__link" href="/register">Create a free account</a>
       to sync your library and unlock progress tracking.
     </p>

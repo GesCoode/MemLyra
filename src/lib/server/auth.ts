@@ -201,7 +201,7 @@ export async function updateUserPassword(
   return true;
 }
 
-export async function verifyEmailWithToken(token: string): Promise<boolean> {
+export async function verifyEmailWithToken(token: string): Promise<string | null> {
   const sql = getSql();
 
   const rows = await sql<{ user_id: string }[]>`
@@ -215,7 +215,7 @@ export async function verifyEmailWithToken(token: string): Promise<boolean> {
   const match = rows[0];
   if (!match) {
     await sql`DELETE FROM email_verification_tokens WHERE id = ${token}`;
-    return false;
+    return null;
   }
 
   await sql`
@@ -225,11 +225,23 @@ export async function verifyEmailWithToken(token: string): Promise<boolean> {
   `;
   await sql`DELETE FROM email_verification_tokens WHERE user_id = ${match.user_id}`;
 
-  return true;
+  return match.user_id;
 }
 
 export async function createSession(userId: string): Promise<{ id: string; expiresAt: Date }> {
   const sql = getSql();
+
+  const users = await sql<{ email_verified: boolean }[]>`
+    SELECT email_verified
+    FROM users
+    WHERE id = ${userId}
+    LIMIT 1
+  `;
+
+  if (!users[0]?.email_verified) {
+    throw new Error('Email not verified');
+  }
+
   const id = randomBytes(32).toString('hex');
   const expiresAt = sessionExpiryDate();
 
@@ -239,6 +251,11 @@ export async function createSession(userId: string): Promise<{ id: string; expir
   `;
 
   return { id, expiresAt };
+}
+
+export async function invalidateSessionsForUser(userId: string): Promise<void> {
+  const sql = getSql();
+  await sql`DELETE FROM sessions WHERE user_id = ${userId}`;
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {

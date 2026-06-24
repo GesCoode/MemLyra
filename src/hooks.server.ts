@@ -1,11 +1,13 @@
 import { redirect } from '@sveltejs/kit';
 import { SESSION_COOKIE, validateSession } from '$lib/server/auth';
+import { ensureDbMigrations } from '$lib/server/dbMigrations';
 import { ensureDevAdminAccount } from '$lib/server/devAdmin';
 import type { Handle } from '@sveltejs/kit';
 
 const protectedPrefixes = ['/dashboard'];
 
 export const handle: Handle = async ({ event, resolve }) => {
+  await ensureDbMigrations();
   await ensureDevAdminAccount();
 
   const sessionId = event.cookies.get(SESSION_COOKIE);
@@ -27,12 +29,21 @@ export const handle: Handle = async ({ event, resolve }) => {
   ]);
 
   if (isProtected && !event.locals.user) {
-    throw redirect(303, '/login');
+    const redirectTo = `${pathname}${event.url.search}`;
+    throw redirect(303, `/login?redirect=${encodeURIComponent(redirectTo)}`);
   }
 
   if (guestAuthPages.has(pathname) && event.locals.user) {
     throw redirect(303, '/dashboard');
   }
 
-  return resolve(event);
+  const response = await resolve(event);
+
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
+
+  return response;
 };

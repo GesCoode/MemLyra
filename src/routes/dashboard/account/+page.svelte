@@ -4,6 +4,7 @@
   import AccountVerification from '$lib/components/AccountVerification.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import PasswordInput from '$lib/components/PasswordInput.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import {
     changePassword,
@@ -16,6 +17,7 @@
   import { removeLibrary, removeProgressMetrics } from '$lib/utils/accountActions';
   import { validatePassword } from '$lib/utils/passwordPolicy';
   import { theme } from '$lib/stores/theme';
+  import { SEO_DESCRIPTIONS } from '$lib/utils/seo';
 
   type ConfirmAction = 'progress' | 'library' | 'account';
 
@@ -36,6 +38,8 @@
   let passwordMessage = $state('');
   let passwordError = $state('');
   let confirmAction = $state<ConfirmAction | null>(null);
+  let deletePassword = $state('');
+  let deleteAccountError = $state('');
   let verification = $state<VerificationView | null>(null);
 
   $effect(() => {
@@ -100,6 +104,8 @@
 
   function openConfirm(action: ConfirmAction) {
     confirmAction = action;
+    deletePassword = '';
+    deleteAccountError = '';
   }
 
   function closeConfirm() {
@@ -132,10 +138,18 @@
         };
       })();
     } else if (confirmAction === 'account') {
+      if (!deletePassword) {
+        deleteAccountError = 'Enter your password to confirm account deletion.';
+        return;
+      }
+
       void (async () => {
         await removeLibrary();
-        const removed = await deleteCurrentAccount();
-        if (!removed) return;
+        const result = await deleteCurrentAccount(deletePassword);
+        if (!result.ok) {
+          deleteAccountError = result.error ?? 'Could not delete account.';
+          return;
+        }
 
         if (browser) {
           sessionStorage.setItem(
@@ -185,9 +199,7 @@
   );
 </script>
 
-<svelte:head>
-  <title>Account · MemLyra</title>
-</svelte:head>
+<SeoHead title="Account" description={SEO_DESCRIPTIONS.dashboardAccount} noindex={true} />
 
 <section class="page-content account-page">
   {#if verification}
@@ -328,7 +340,24 @@
   {/if}
 </section>
 
-{#if confirmCopy}
+{#if confirmAction === 'account'}
+  <button class="confirm-dialog__backdrop" type="button" aria-label="Close dialog" onclick={closeConfirm}></button>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title">
+    <h3 id="delete-account-title" class="confirm-dialog__title">{confirmCopy?.title}</h3>
+    <p class="confirm-dialog__message">{confirmCopy?.message}</p>
+    <label class="library-field mt-4 block">
+      <span class="field-label">Password</span>
+      <PasswordInput bind:value={deletePassword} autocomplete="current-password" />
+    </label>
+    {#if deleteAccountError}
+      <p class="library-message library-message-error mt-3">{deleteAccountError}</p>
+    {/if}
+    <div class="confirm-dialog__actions">
+      <button class="btn-secondary" type="button" onclick={closeConfirm}>Cancel</button>
+      <button class="btn-danger" type="button" onclick={handleConfirm}>{confirmCopy?.confirmLabel}</button>
+    </div>
+  </div>
+{:else if confirmCopy}
   <ConfirmDialog
     open={confirmAction !== null}
     title={confirmCopy.title}

@@ -1,6 +1,8 @@
 <script lang="ts">
   import StarCounter from '$lib/components/StarCounter.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
   import { PRACTICE_HUB_TITLE } from '$lib/app';
+  import { SEO_DESCRIPTIONS } from '$lib/utils/seo';
 
   const sections = [
     {
@@ -20,9 +22,11 @@
   ] as const;
 </script>
 
-<svelte:head>
-  <title>{PRACTICE_HUB_TITLE} · MemLyra</title>
-</svelte:head>
+<SeoHead
+  title="Free flashcard practice"
+  description={SEO_DESCRIPTIONS.tryHub}
+  path="/try"
+/>
 
 <section class="page-content" aria-labelledby="practice-hub-heading">
   <h1 id="practice-hub-heading" class="library-header__title mt-0">{PRACTICE_HUB_TITLE}</h1>

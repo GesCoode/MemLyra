@@ -3,8 +3,9 @@ import { createUser, findUserByEmail } from '$lib/server/auth';
 import { sendVerificationEmail } from '$lib/server/mail';
 import { getAppOrigin } from '$lib/server/origin';
 import { validatePassword } from '$lib/utils/passwordPolicy';
+import { checkRateLimit, rateLimitKey } from '$lib/server/rateLimit';
 
-export const POST: RequestHandler = async ({ request, url }) => {
+export const POST: RequestHandler = async ({ request, url, getClientAddress }) => {
   let body: { email?: string; name?: string; password?: string };
 
   try {
@@ -14,6 +15,10 @@ export const POST: RequestHandler = async ({ request, url }) => {
   }
 
   const email = body.email?.trim() ?? '';
+  const ip = getClientAddress();
+  if (!(await checkRateLimit(rateLimitKey('register', ip, email), 5, 60 * 60 * 1000))) {
+    return json({ error: 'Too many registration attempts. Try again later.' }, { status: 429 });
+  }
   const name = body.name?.trim() ?? '';
   const password = body.password ?? '';
 
@@ -28,7 +33,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
   const existing = await findUserByEmail(email);
   if (existing) {
-    return json({ error: 'An account with this email already exists.' }, { status: 409 });
+    return json({
+      message:
+        'If this email is not already registered, check your inbox for an activation link. Otherwise try logging in.',
+      emailSent: false
+    });
   }
 
   const { user, verificationToken } = await createUser(email, name, password);

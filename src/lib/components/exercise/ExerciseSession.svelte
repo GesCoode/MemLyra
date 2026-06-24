@@ -680,7 +680,7 @@
 
     {#if showResult && (settings.quizMode === 'type' || settings.quizMode === 'multipleChoice')}
       <div class="exercise-result-actions">
-        <button class="btn-primary w-full sm:w-auto" type="button" onclick={nextFromResult}>
+        <button class="btn-primary exercise-next-btn" type="button" onclick={nextFromResult}>
           {lastCorrect ? 'Next card' : 'Continue'}
         </button>
         {#if !lastCorrect}
@@ -707,7 +707,7 @@
 
     {#if flipped && answerRevealedForGrade && settings.quizMode === 'selfGrade' && !showResult}
       <div class="exercise-grade-row">
-        <button class="btn-secondary" type="button" onclick={skipWithoutGrade}>Next card</button>
+        <button class="btn-secondary exercise-next-btn" type="button" onclick={skipWithoutGrade}>Next card</button>
         <button class="btn-secondary exercise-grade-wrong" type="button" onclick={() => gradeSelf(false)}>
           I had it wrong
         </button>

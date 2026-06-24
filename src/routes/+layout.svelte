@@ -3,6 +3,7 @@
   import favicon from '$lib/assets/favicon.svg';
   import Navbar from '$lib/sections/Navbar.svelte';
   import Footer from '$lib/sections/Footer.svelte';
+  import GuestRegisterNudge from '$lib/components/GuestRegisterNudge.svelte';
   import { page } from '$app/stores';
   import { setUser } from '$lib/stores/auth';
   import { setGuestMode } from '$lib/stores/guestMode';
@@ -12,6 +13,7 @@
   import { exerciseSessionActive } from '$lib/stores/exerciseUi';
   import { initTheme } from '$lib/stores/theme';
   import { loadGuestIntoStores } from '$lib/utils/guestSync';
+  import { buildOrganizationJsonLd, jsonLdScript } from '$lib/utils/seo';
 
   let { children, data } = $props();
 
@@ -19,13 +21,15 @@
     setUser(data.user);
 
     const onTryRoute = $page.url.pathname.startsWith('/try');
+    const onMarketplaceRoute = $page.url.pathname.startsWith('/marketplace');
+    const guestRoute = onTryRoute || onMarketplaceRoute;
 
     if (data.user) {
       setGuestMode(false);
       void loadDecks();
       void loadTags();
       void loadFlashcards();
-    } else if (onTryRoute) {
+    } else if (guestRoute) {
       setGuestMode(true);
       loadGuestIntoStores();
     } else {
@@ -39,11 +43,16 @@
   if (typeof window !== 'undefined') {
     initTheme();
   }
+
+  const showGuestBanner = $derived(
+    !data.user &&
+      ($page.url.pathname.startsWith('/try') || $page.url.pathname.startsWith('/marketplace'))
+  );
 </script>
 
 <svelte:head>
   <link rel="icon" href={favicon} />
-  <title>MemLyra</title>
+  {@html `<script type="application/ld+json">${jsonLdScript(buildOrganizationJsonLd())}</script>`}
 </svelte:head>
 
 <div
@@ -56,11 +65,15 @@
     <Navbar user={data.user} />
   {/if}
 
+  {#if showGuestBanner && !$exerciseSessionActive}
+    <GuestRegisterNudge variant="banner" />
+  {/if}
+
   <main id="main-content" class="flex-1" class:main--exercise={$exerciseSessionActive} tabindex="-1">
     {@render children()}
   </main>
 
   {#if !$exerciseSessionActive}
-    <Footer />
+    <Footer user={data.user} />
   {/if}
 </div>

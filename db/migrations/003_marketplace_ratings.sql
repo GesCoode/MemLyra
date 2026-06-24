@@ -1,4 +1,4 @@
-CREATE TABLE marketplace_ratings (
+CREATE TABLE IF NOT EXISTS marketplace_ratings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   marketplace_deck_id UUID NOT NULL REFERENCES marketplace_decks(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -8,5 +8,5 @@ CREATE TABLE marketplace_ratings (
   UNIQUE (marketplace_deck_id, user_id)
 );
 
-CREATE INDEX idx_marketplace_ratings_deck ON marketplace_ratings(marketplace_deck_id);
-CREATE INDEX idx_marketplace_ratings_user ON marketplace_ratings(user_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_ratings_deck ON marketplace_ratings(marketplace_deck_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_ratings_user ON marketplace_ratings(user_id);

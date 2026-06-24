@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "dev:db": "docker compose up -d db",
+    "db:migrate": "node scripts/db-migrate.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",

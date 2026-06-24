@@ -55,12 +55,20 @@ export async function updateProfile(name: string): Promise<boolean> {
   return true;
 }
 
-export async function deleteCurrentAccount(): Promise<boolean> {
-  const response = await fetch('/api/auth/account', { method: 'DELETE' });
-  if (!response.ok) return false;
+export async function deleteCurrentAccount(password: string): Promise<{ ok: boolean; error?: string }> {
+  const response = await fetch('/api/auth/account', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password })
+  });
+
+  if (!response.ok) {
+    const data = (await response.json()) as { error?: string };
+    return { ok: false, error: data.error ?? 'Could not delete account.' };
+  }
 
   user.set(null);
-  return true;
+  return { ok: true };
 }
 
 export function getAccountStartDate(currentUser: User | null): Date {

@@ -6,6 +6,7 @@ import {
 } from '$lib/server/auth';
 import { sendPasswordResetEmail, sendVerificationEmail } from '$lib/server/mail';
 import { getAppOrigin } from '$lib/server/origin';
+import { checkRateLimit, rateLimitKey } from '$lib/server/rateLimit';
 
 const GENERIC_MESSAGE =
   'If an account exists for that email, a password reset link has been sent.';
@@ -13,7 +14,7 @@ const GENERIC_MESSAGE =
 const GENERIC_VERIFICATION_MESSAGE =
   'If an account exists for that email and still needs activation, a new activation link has been sent.';
 
-export const POST: RequestHandler = async ({ request, url }) => {
+export const POST: RequestHandler = async ({ request, url, getClientAddress }) => {
   let body: { email?: string };
 
   try {
@@ -23,6 +24,10 @@ export const POST: RequestHandler = async ({ request, url }) => {
   }
 
   const email = body.email?.trim() ?? '';
+  const ip = getClientAddress();
+  if (!(await checkRateLimit(rateLimitKey('forgot-password', ip, email), 5, 60 * 60 * 1000))) {
+    return json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
   if (!email) {
     return json({ error: 'Enter your email address.' }, { status: 400 });
   }

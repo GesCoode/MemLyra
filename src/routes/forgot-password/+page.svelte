@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { APP_NAME } from '$lib/app';
   import AuthCard from '$lib/components/AuthCard.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
+  import { SEO_DESCRIPTIONS } from '$lib/utils/seo';
 
   let email = $state('');
   let error = $state('');
@@ -37,9 +38,12 @@
   }
 </script>
 
-<svelte:head>
-  <title>Forgot password · {APP_NAME}</title>
-</svelte:head>
+<SeoHead
+  title="Forgot password"
+  description={SEO_DESCRIPTIONS.forgotPassword}
+  path="/forgot-password"
+  noindex={true}
+/>
 
 <AuthCard
   title="Forgot password"

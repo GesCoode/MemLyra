@@ -29,11 +29,16 @@ git pull
 docker compose up -d --build
 ```
 
-### Run a database migration
+Pending database migrations run automatically when the app starts. To apply them manually:
 
 ```bash
-docker exec -i memlyra-db psql -U memlyra -d memlyra < db/migrations/002_marketplace.sql
-docker exec -i memlyra-db psql -U memlyra -d memlyra < db/migrations/003_marketplace_ratings.sql
+npm run db:migrate
+```
+
+Or inside Docker:
+
+```bash
+docker exec memlyra node scripts/db-migrate.mjs
 ```
 
 ## Nginx

@@ -2,17 +2,40 @@
   let {
     value = 0,
     interactive = false,
+    disabled = false,
     label = 'Deck rating',
     onChange
   }: {
     value?: number;
     interactive?: boolean;
+    disabled?: boolean;
     label?: string;
     onChange?: (rating: number) => void;
   } = $props();
+
+  function handleKeydown(event: KeyboardEvent, star: number) {
+    if (!interactive || disabled) return;
+
+    if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      onChange?.(Math.min(5, (value || 0) + 1));
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      onChange?.(Math.max(1, (value || 1) - 1));
+    } else if (event.key === ' ' || event.key === 'Enter') {
+      event.preventDefault();
+      onChange?.(star);
+    }
+  }
 </script>
 
-<div class="marketplace-stars" role={interactive ? 'radiogroup' : 'img'} aria-label={label}>
+<div
+  class="marketplace-stars"
+  class:marketplace-stars--disabled={disabled}
+  role={interactive ? 'radiogroup' : 'img'}
+  aria-label={label}
+  aria-disabled={interactive && disabled}
+>
   {#each [1, 2, 3, 4, 5] as star}
     {#if interactive}
       <button
@@ -22,7 +45,10 @@
         role="radio"
         aria-checked={star === value}
         aria-label={`${star} star${star === 1 ? '' : 's'}`}
+        disabled={disabled}
+        tabindex={star === Math.max(value, 1) ? 0 : -1}
         onclick={() => onChange?.(star)}
+        onkeydown={(event) => handleKeydown(event, star)}
       >
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path

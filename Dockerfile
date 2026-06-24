@@ -13,6 +13,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY --from=build /app/build ./build
+COPY --from=build /app/db/migrations ./db/migrations
 COPY --from=build /app/package*.json ./
 RUN npm ci --omit=dev
 

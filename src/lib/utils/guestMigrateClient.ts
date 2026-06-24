@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { goto, invalidateAll } from '$app/navigation';
 import { clearGuestData, hasGuestDataToMigrate, readGuestData, stripGuestStarterPreset } from '$lib/utils/guestStorage';
 import { setGuestMode } from '$lib/stores/guestMode';
 
@@ -25,4 +26,10 @@ export async function migrateGuestDataIfPresent(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function completePostAuth(redirectTo = '/dashboard'): Promise<void> {
+  await migrateGuestDataIfPresent();
+  await invalidateAll();
+  goto(redirectTo, { replaceState: true });
 }

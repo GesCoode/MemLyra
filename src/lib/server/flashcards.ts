@@ -1,4 +1,5 @@
 import { getSql } from '$lib/server/db';
+import { LIMITS, trimToMax } from '$lib/server/limits';
 import { findOrCreateTagForUser } from '$lib/server/tags';
 import {
   appendRecentResult,
@@ -112,6 +113,35 @@ export async function listFlashcardsForUser(userId: string): Promise<Flashcard[]
   return rows.map((row) => toFlashcard(row, tagMap.get(row.id) ?? []));
 }
 
+async function verifyDeckOwnedByUser(userId: string, deckId: string | null): Promise<boolean> {
+  if (!deckId) return true;
+
+  const sql = getSql();
+  const rows = await sql<{ id: string }[]>`
+    SELECT id
+    FROM decks
+    WHERE id = ${deckId}
+      AND user_id = ${userId}
+    LIMIT 1
+  `;
+
+  return rows.length > 0;
+}
+
+async function verifyTagsOwnedByUser(userId: string, tagIds: string[]): Promise<boolean> {
+  if (tagIds.length === 0) return true;
+
+  const sql = getSql();
+  const rows = await sql<{ count: number }[]>`
+    SELECT COUNT(*)::int AS count
+    FROM tags
+    WHERE user_id = ${userId}
+      AND id = ANY(${tagIds})
+  `;
+
+  return rows[0]?.count === tagIds.length;
+}
+
 async function setFlashcardTags(flashcardId: string, tagIds: string[]) {
   const sql = getSql();
   await sql`DELETE FROM flashcard_tags WHERE flashcard_id = ${flashcardId}`;
@@ -134,9 +164,12 @@ export async function createFlashcardForUser(
   tagIds: string[] = [],
   deckId: string | null = null
 ): Promise<Flashcard | null> {
-  const front = sideA.trim();
-  const back = sideB.trim();
+  const front = trimToMax(sideA, LIMITS.maxCardSideLength);
+  const back = trimToMax(sideB, LIMITS.maxCardSideLength);
   if (!front || !back) return null;
+
+  if (!(await verifyDeckOwnedByUser(userId, deckId))) return null;
+  if (!(await verifyTagsOwnedByUser(userId, tagIds))) return null;
 
   const sql = getSql();
   const rows = await sql<FlashcardRow[]>`
@@ -160,6 +193,10 @@ export async function updateFlashcardDeckForUser(
   flashcardId: string,
   deckId: string | null
 ): Promise<boolean> {
+  if (!(await verifyDeckOwnedByUser(userId, deckId))) {
+    return false;
+  }
+
   const sql = getSql();
   const rows = await sql<{ id: string }[]>`
     UPDATE flashcards
@@ -187,6 +224,8 @@ export async function updateFlashcardTagsForUser(
   `;
 
   if (!rows[0]) return false;
+
+  if (!(await verifyTagsOwnedByUser(userId, tagIds))) return false;
 
   await setFlashcardTags(flashcardId, tagIds);
   return true;
@@ -344,6 +383,16 @@ export async function importFlashcardRowsForUser(
   deckId: string | null = null
 ): Promise<ImportResult> {
   const result: ImportResult = { imported: 0, skipped: 0, errors: [] };
+
+  if (rows.length > LIMITS.maxImportRows) {
+    result.errors.push(`Import limited to ${LIMITS.maxImportRows} cards at a time.`);
+    return result;
+  }
+
+  if (deckId !== null && !(await verifyDeckOwnedByUser(userId, deckId))) {
+    result.errors.push('Selected deck was not found.');
+    return result;
+  }
 
   for (const [index, row] of rows.entries()) {
     const front = row.front.trim();

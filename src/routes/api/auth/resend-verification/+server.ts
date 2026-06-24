@@ -2,11 +2,12 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { createVerificationToken, findUserByEmail } from '$lib/server/auth';
 import { sendVerificationEmail } from '$lib/server/mail';
 import { getAppOrigin } from '$lib/server/origin';
+import { checkRateLimit, rateLimitKey } from '$lib/server/rateLimit';
 
 const GENERIC_MESSAGE =
   'If an account exists for that email and still needs activation, a new activation link has been sent.';
 
-export const POST: RequestHandler = async ({ request, url }) => {
+export const POST: RequestHandler = async ({ request, url, getClientAddress }) => {
   let body: { email?: string };
 
   try {
@@ -16,6 +17,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
   }
 
   const email = body.email?.trim() ?? '';
+  const ip = getClientAddress();
+  if (!(await checkRateLimit(rateLimitKey('resend-verification', ip, email), 5, 60 * 60 * 1000))) {
+    return json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
+
   if (!email) {
     return json({ error: 'Enter your email address.' }, { status: 400 });
   }

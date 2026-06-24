@@ -1,23 +1,35 @@
-# SvelteKit Starter
+# MemLyra
 
-A production-ready SvelteKit template with user authentication, PostgreSQL, Docker, and a polished UI foundation. Clone it when starting a new project and customize from there.
+A free flashcard study platform. Practice without an account, or sign up to sync your library, track progress, and share decks on the community marketplace.
 
-## What's included
+**Live site:** [memlyra.com](https://memlyra.com)
 
-- **SvelteKit 2** with TypeScript and the Node adapter
+## Features
+
+- **Guest practice** (`/try`) — library, exercises, and marketplace browsing with data stored in the browser; no sign-up required
+- **Flashcard library** — decks, tags, import/export, and organization tools
+- **Exercise engine** — filter by deck or tags; modes include typing, multiple choice, self-grade, and Anki-style review; bidirectional practice
+- **Progress tracking** — stars, learned/mastered/both-ways states, achievements, and streaks
+- **Marketplace** — publish decks, browse community content, rate listings, and import into your library
+- **SEO** — public marketplace pages with slugs, sitemap, robots.txt, and structured data
+- **Auth** — register, email verification, password reset, and account management
+- **Guest migration** — guest data can be imported when creating an account
+
+## Tech stack
+
+- **SvelteKit 2** with Svelte 5, TypeScript, and the Node adapter
 - **Tailwind CSS 4** with light/dark theme support
-- **Auth:** register, login, email verification, password reset, account management
-- **PostgreSQL** schema for users and sessions
-- **Docker Compose** for local and production deployment
-- **Email** via SMTP (optional — links are logged to the console when SMTP is not configured)
+- **PostgreSQL 16** via the `postgres` driver
+- **Docker Compose** for local database and production deployment
+- **Email** via SMTP (optional — verification links are logged to the console when SMTP is not configured)
 
 ## Quick start
 
 ### 1. Clone and install
 
 ```sh
-git clone <your-repo-url> my-app
-cd my-app
+git clone <your-repo-url> MemLyra
+cd MemLyra
 npm install
 ```
 
@@ -29,11 +41,38 @@ cp .env.example .env
 
 Set at minimum:
 
-- `DATABASE_URL` — PostgreSQL connection string (for local dev outside Docker)
-- `SESSION_SECRET` — a long random string
-- `ORIGIN` — your app URL (e.g. `http://localhost:5173` for dev)
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SESSION_SECRET` | Long random string for session cookies |
+| `ORIGIN` | App URL (e.g. `http://localhost:5173` for dev) |
+| `POSTGRES_PASSWORD` | Used by Docker Compose for the database container |
 
-### 3. Run with Docker (recommended)
+SMTP variables are optional for local development.
+
+### 3. Start the database
+
+```sh
+npm run dev:db
+# or: docker compose up -d db
+```
+
+On first start, `db/schema.sql` is applied automatically to a fresh Postgres volume.
+
+### 4. Run the dev server
+
+```sh
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173).
+
+A dev admin account is seeded automatically when `NODE_ENV` is not `production`:
+
+- **Email:** `admin` (short form) or `admin@local`
+- **Password:** `admin`
+
+### 5. Run with Docker (app + database)
 
 ```sh
 docker compose up -d --build
@@ -41,62 +80,82 @@ docker compose up -d --build
 
 The app is available at [http://localhost:3001](http://localhost:3001).
 
-### 4. Run locally (without Docker)
+## Scripts
 
-Start PostgreSQL and apply the schema:
-
-```sh
-psql $DATABASE_URL -f db/schema.sql
-```
-
-Then start the dev server:
-
-```sh
-npm run dev
-```
-
-## Customize for your project
-
-1. **App name** — edit `APP_NAME` in `src/lib/app.ts`
-2. **Package name** — update `name` in `package.json`
-3. **Favicon** — replace `src/lib/assets/favicon.svg`
-4. **Database** — extend `db/schema.sql` with your tables
-5. **Routes** — add pages under `src/routes/dashboard/` or elsewhere
-6. **Deploy** — see `deploy/DEPLOY.md` and update `deploy/nginx/app.conf` with your domain
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run dev:db` | Start PostgreSQL via Docker Compose |
+| `npm run db:migrate` | Apply any pending database migrations manually |
+| `npm run build` | Production build |
+| `npm run preview` | Preview production build |
+| `npm run check` | Type-check with svelte-check |
 
 ## Project structure
 
 ```
 src/
   lib/
-    app.ts              # App name and storage keys
-    components/         # Reusable UI (AuthCard, ThemeToggle, etc.)
+    app.ts              # App name, tagline, storage keys
+    components/         # UI (exercise, library, marketplace, auth, …)
     sections/           # Layout (Navbar, Footer)
-    server/             # Server-only code (auth, db, mail)
-    stores/             # Client stores (auth, theme)
+    server/             # Auth, DB, flashcards, marketplace, mail, migrations
+    stores/             # Client stores (auth, flashcards, decks, tags, marketplace)
+    utils/              # Exercise logic, SEO, slugs, achievements, guest storage
   routes/
-    api/auth/           # Auth API endpoints
-    dashboard/          # Protected pages
-    login, register/    # Public auth pages
+    api/                # REST endpoints (auth, flashcards, decks, tags, marketplace)
+    dashboard/          # Protected app (exercise, library, progress, marketplace, account)
+    try/                # Guest practice (no account)
+    marketplace/        # Public marketplace browse and deck detail pages
+    login, register/    # Auth pages
 db/
-  schema.sql            # PostgreSQL schema
-deploy/                 # VPS deployment notes and nginx config
+  schema.sql            # Full schema for fresh installs
+  migrations/           # Incremental migrations for existing databases
+deploy/                 # VPS deployment notes and Nginx config
+scripts/
+  db-migrate.mjs        # Manual migration helper
 ```
 
-## Scripts
+## Routes overview
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run preview` | Preview production build |
-| `npm run check` | Type-check with svelte-check |
+| Path | Access | Purpose |
+|------|--------|---------|
+| `/` | Public | Landing page |
+| `/try/*` | Guest | Practice without an account |
+| `/marketplace` | Public | Browse community decks |
+| `/marketplace/[slug]` | Public | Deck detail (SEO-friendly) |
+| `/dashboard/*` | Authenticated | Full app |
+| `/login`, `/register` | Public | Auth flows |
+
+## Database migrations
+
+Fresh Docker volumes load `db/schema.sql` automatically and record all migrations as applied. Existing databases pick up any pending files from `db/migrations/` on app startup (or via `npm run db:migrate`).
+
+Migrations are schema-only — they never copy data between environments. Your local database and production database stay independent.
+
+| File | Purpose |
+|------|---------|
+| `001_flashcard_library.sql` | Decks, tags, flashcards |
+| `002_marketplace.sql` | Marketplace tables |
+| `003_marketplace_ratings.sql` | Deck ratings |
+| `004_marketplace_slug.sql` | SEO slugs |
+| `005_rate_limits_and_rating_stats.sql` | Postgres rate limits, denormalized rating stats |
+
+See [deploy/DEPLOY.md](deploy/DEPLOY.md) for production notes.
 
 ## Deployment
 
-See [deploy/DEPLOY.md](deploy/DEPLOY.md) for VPS deployment with Docker, Nginx, and Let's Encrypt.
+Production runs on a VPS with Docker Compose, Nginx, and Let's Encrypt. Full instructions:
 
-A GitHub Actions workflow template is in [workflows/deploy.yml](workflows/deploy.yml).
+**[deploy/DEPLOY.md](deploy/DEPLOY.md)**
+
+CI/CD: pushes to `main` trigger [.github/workflows/deploy.yml](.github/workflows/deploy.yml), which SSHs into the server, pulls, and rebuilds. Pending migrations run automatically when the app starts.
+
+Nginx config template: `deploy/nginx/memlyra.conf`
+
+## Environment variables
+
+See [.env.example](.env.example) for all supported variables. Production requires `ORIGIN`, `SESSION_SECRET`, `POSTGRES_PASSWORD`, and SMTP settings for email verification to work reliably.
 
 ## License
 

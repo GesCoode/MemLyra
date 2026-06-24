@@ -7,8 +7,9 @@ import {
   verifyPassword
 } from '$lib/server/auth';
 import { ensureDevAdminAccount, resolveDevLoginEmail } from '$lib/server/devAdmin';
+import { checkRateLimit, rateLimitKey } from '$lib/server/rateLimit';
 
-export const POST: RequestHandler = async ({ request, cookies, url }) => {
+export const POST: RequestHandler = async ({ request, cookies, url, getClientAddress }) => {
   let body: { email?: string; password?: string };
 
   try {
@@ -22,6 +23,11 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 
   if (!email || !password) {
     return json({ error: 'Enter your email and password.' }, { status: 400 });
+  }
+
+  const ip = getClientAddress();
+  if (!(await checkRateLimit(rateLimitKey('login', ip, email), 10, 15 * 60 * 1000))) {
+    return json({ error: 'Too many login attempts. Try again later.' }, { status: 429 });
   }
 
   await ensureDevAdminAccount();

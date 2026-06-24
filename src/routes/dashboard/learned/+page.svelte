@@ -3,20 +3,20 @@
   import LearnedFlashcardsList from '$lib/components/LearnedFlashcardsList.svelte';
   import LearnedProgressChart from '$lib/components/LearnedProgressChart.svelte';
   import StarCounter from '$lib/components/StarCounter.svelte';
+  import SeoHead from '$lib/components/SeoHead.svelte';
   import { getAccountStartDate, user } from '$lib/stores/auth';
   import { decks } from '$lib/stores/decks';
   import { bothWaysCount, flashcards, learnedCount, masteredCount } from '$lib/stores/flashcards';
   import { tags } from '$lib/stores/tags';
   import { isLearnedCard } from '$lib/utils/learnedProgress';
+  import { SEO_DESCRIPTIONS } from '$lib/utils/seo';
 
   let accountStart = $derived(getAccountStartDate($user));
   let learnedCards = $derived($flashcards.filter((card) => isLearnedCard(card)));
   let hasLearnedCards = $derived(learnedCards.length > 0);
 </script>
 
-<svelte:head>
-  <title>Progress · MemLyra</title>
-</svelte:head>
+<SeoHead title="Progress" description={SEO_DESCRIPTIONS.dashboardLearned} noindex={true} />
 
 <section class="page-content progress-page">
   <a class="btn-text-link" href="/dashboard">← Back to dashboard</a>
