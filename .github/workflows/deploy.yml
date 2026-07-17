@@ -19,12 +19,12 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
             set -e
-            if [ ! -d /root/MemLyra ]; then
-              echo "ERROR: /root/MemLyra missing on server"
+            if [ ! -d /root/Web/MemLyra ]; then
+              echo "ERROR: /root/Web/MemLyra missing on server"
               exit 1
             fi
 
-            cd /root/MemLyra
+            cd /root/Web/MemLyra
             git fetch origin
             git reset --hard origin/main
             docker compose up -d --build
